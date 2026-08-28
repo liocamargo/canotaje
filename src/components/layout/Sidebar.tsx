@@ -1,32 +1,8 @@
 "use client";
 
-import {
-  Home,
-  Users,
-  CreditCard,
-  Activity,
-  Briefcase,
-  LogOut,
-  Settings,
-} from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
-
-export type TabId =
-  | "inicio"
-  | "socios"
-  | "pagos"
-  | "actividades"
-  | "colaboradores"
-  | "configuracion";
-
-const menuItems: { id: TabId; icon: typeof Home; label: string }[] = [
-  { id: "inicio", icon: Home, label: "Inicio" },
-  { id: "socios", icon: Users, label: "Socios" },
-  { id: "pagos", icon: CreditCard, label: "Pagos" },
-  { id: "actividades", icon: Activity, label: "Actividades" },
-  { id: "colaboradores", icon: Briefcase, label: "Colaboradores" },
-  { id: "configuracion", icon: Settings, label: "Configuración" },
-];
+import { NAV_ITEMS, type TabId } from "@/components/layout/navItems";
 
 export function Sidebar({
   activeTab,
@@ -38,7 +14,7 @@ export function Sidebar({
   const { staff, logOut } = useAuth();
 
   return (
-    <div className="w-64 bg-[#f8f9fa] border-r h-screen flex flex-col justify-between fixed left-0 top-0">
+    <div className="hidden md:flex md:flex-col md:justify-between w-64 bg-[#f8f9fa] border-r h-screen fixed left-0 top-0">
       <div>
         <div className="p-4 border-b flex items-center gap-3">
           <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
@@ -50,7 +26,7 @@ export function Sidebar({
           </div>
         </div>
         <nav className="p-4 space-y-1">
-          {menuItems.map((item) => (
+          {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}

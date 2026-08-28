@@ -13,6 +13,13 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  throw new Error(
+    "Faltan las variables NEXT_PUBLIC_FIREBASE_* (por ejemplo en Vercel → Settings → Environment Variables, " +
+      "o en .env.local en desarrollo). Sin ellas Firebase no puede inicializarse."
+  );
+}
+
 export const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);

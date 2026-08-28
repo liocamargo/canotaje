@@ -1,10 +1,10 @@
 "use client";
 
-import { Settings } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export function Header({ title, subtitle }: { title: string; subtitle: string }) {
-  const { user } = useAuth();
+  const { user, logOut } = useAuth();
   const initials = (user?.displayName ?? user?.email ?? "?")
     .split(" ")
     .map((n) => n[0])
@@ -13,14 +13,21 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
     .toUpperCase();
 
   return (
-    <header className="bg-white border-b px-8 py-4 flex justify-between items-center sticky top-0 z-10">
+    <header className="bg-white border-b px-4 md:px-8 py-4 flex justify-between items-center sticky top-0 z-10">
       <div>
         <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
         <p className="text-sm text-gray-500">{subtitle}</p>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         <button className="p-2 hover:bg-gray-100 rounded-full">
           <Settings size={18} className="text-gray-600" />
+        </button>
+        <button
+          onClick={() => logOut()}
+          className="md:hidden p-2 hover:bg-gray-100 rounded-full"
+          title="Cerrar sesión"
+        >
+          <LogOut size={18} className="text-gray-600" />
         </button>
         <div
           title={user?.email ?? ""}

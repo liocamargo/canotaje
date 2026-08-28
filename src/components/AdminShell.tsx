@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Sidebar, type TabId } from "@/components/layout/Sidebar";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { BottomTabBar } from "@/components/layout/BottomTabBar";
+import { type TabId } from "@/components/layout/navItems";
 import { Header } from "@/components/layout/Header";
 import { DashboardView } from "@/components/views/DashboardView";
 import { SociosView } from "@/components/views/SociosView";
@@ -27,10 +29,10 @@ export function AdminShell() {
     <div className="flex h-screen bg-[#fafafa] font-sans text-gray-900">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <main className="flex-1 ml-64 flex flex-col h-screen overflow-hidden">
+      <main className="flex-1 md:ml-64 flex flex-col h-screen overflow-hidden">
         <Header title={headerInfo.title} subtitle={headerInfo.subtitle} />
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pb-24 md:pb-0">
           {activeTab === "inicio" && <DashboardView />}
           {activeTab === "socios" && <SociosView />}
           {activeTab === "pagos" && <PagosView />}
@@ -39,6 +41,8 @@ export function AdminShell() {
           {activeTab === "configuracion" && <ConfiguracionView />}
         </div>
       </main>
+
+      <BottomTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 }
