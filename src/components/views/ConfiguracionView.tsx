@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CreditCard,
   Download,
@@ -17,8 +17,60 @@ import {
   updateTipoCuota,
   useTiposCuota,
 } from "@/lib/data/tiposCuota";
+import { addSociosBatch } from "@/lib/data/socios";
 import { DEFAULT_CONFIG, saveClubConfig, useClubConfig } from "@/lib/data/config";
-import type { ClubConfig } from "@/lib/types";
+import { downloadCsv, normalizeHeader, parseCsv, toCsv } from "@/lib/csv";
+import type { ClubConfig, Socio, SocioEstado } from "@/lib/types";
+
+const PLANTILLA_HEADERS = [
+  "Nombre Completo",
+  "Estado",
+  "Correo Electrónico",
+  "Teléfono de contacto",
+  "DNI",
+  "Fecha de Nacimiento",
+  "Contacto de Emergencia",
+  "Categoría",
+  "Condición médica o alergia",
+];
+
+const ESTADOS_VALIDOS: SocioEstado[] = ["Activo", "Pendiente", "Inactivo"];
+
+interface FilaImportada {
+  nombreCompleto: string;
+  estado: SocioEstado;
+  email: string;
+  telefono: string;
+  dni: string;
+  fechaNacimiento: string;
+  contactoEmergencia: string;
+  categoria: string;
+  condicionMedica: string;
+}
+
+function mapearFila(headers: string[], fila: string[]): FilaImportada {
+  const get = (matcher: (h: string) => boolean) => {
+    const idx = headers.findIndex(matcher);
+    return idx === -1 ? "" : (fila[idx] ?? "").trim();
+  };
+
+  const estadoRaw = get((h) => h === "estado");
+  const estado = ESTADOS_VALIDOS.includes(estadoRaw as SocioEstado)
+    ? (estadoRaw as SocioEstado)
+    : "Pendiente";
+
+  return {
+    nombreCompleto: get((h) => h === "nombre completo" || h === "nombre y apellido"),
+    estado,
+    email: get((h) => h.includes("correo") || h === "email"),
+    telefono: get((h) => h.includes("telefono")),
+    dni: get((h) => h === "dni"),
+    fechaNacimiento: get((h) => h.includes("fecha de nacimiento")),
+    contactoEmergencia: get((h) => h.includes("contacto de emergencia")),
+    categoria: get((h) => h === "categoria"),
+    condicionMedica: get((h) => h.includes("condicion") || h.includes("alergia")),
+  };
+}
 
 export function ConfiguracionView() {
   const { config, loading: configLoading } = useClubConfig();
@@ -42,7 +94,6 @@ export function ConfiguracionView() {
         emailContacto: form.emailContacto,
         telefono: form.telefono,
         diaVencimiento: Number(form.diaVencimiento) || 0,
-        formularioInscripcionUrl: form.formularioInscripcionUrl,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -104,12 +155,79 @@ export function ConfiguracionView() {
     }
   };
 
+  // Importar / exportar socios
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ ok: number; errores: string[] } | null>(null);
+
+  const handleDescargarPlantilla = () => {
+    downloadCsv("plantilla-socios.csv", toCsv([PLANTILLA_HEADERS]));
+  };
+
+  const handleImportarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleArchivoSeleccionado = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const text = await file.text();
+      const rows = parseCsv(text);
+      if (rows.length < 2) {
+        setImportResult({ ok: 0, errores: ["El archivo no tiene filas de datos para importar."] });
+        return;
+      }
+
+      const headers = rows[0].map(normalizeHeader);
+      const tipoCuotaPorDefecto = tiposCuota.find((t) => t.porDefecto) || tiposCuota[0];
+      const errores: string[] = [];
+      const nuevosSocios: Omit<Socio, "id" | "createdAt">[] = [];
+
+      rows.slice(1).forEach((fila, index) => {
+        const datos = mapearFila(headers, fila);
+        const numeroFila = index + 2;
+        if (!datos.nombreCompleto || !datos.dni || !datos.email) {
+          errores.push(`Fila ${numeroFila}: falta Nombre Completo, DNI o Correo Electrónico.`);
+          return;
+        }
+        nuevosSocios.push({
+          nombreCompleto: datos.nombreCompleto,
+          estado: datos.estado,
+          email: datos.email,
+          telefono: datos.telefono || undefined,
+          dni: datos.dni,
+          fechaNacimiento: datos.fechaNacimiento || undefined,
+          contactoEmergencia: datos.contactoEmergencia || undefined,
+          categoria: datos.categoria || undefined,
+          condicionMedica: datos.condicionMedica || undefined,
+          deuda: "Al día",
+          grupoFamiliar: null,
+          tipoCuotaId: tipoCuotaPorDefecto?.id || "",
+        });
+      });
+
+      if (nuevosSocios.length > 0) {
+        await addSociosBatch(nuevosSocios);
+      }
+      setImportResult({ ok: nuevosSocios.length, errores });
+    } catch {
+      setImportResult({ ok: 0, errores: ["No se pudo leer el archivo. Verificá que sea un CSV válido."] });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   if (configLoading) {
-    return <div className="p-8 text-sm text-gray-500">Cargando configuración...</div>;
+    return <div className="px-4 lg:px-6 py-6 text-sm text-gray-500">Cargando configuración...</div>;
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-8">
+    <div className="px-4 lg:px-6 py-6 space-y-8">
       <div className="flex gap-2 border-b mb-6">
         <button className="px-4 py-2 text-sm font-medium border-b-2 border-gray-900 text-gray-900 flex items-center gap-2">
           <Settings size={16} /> General
@@ -152,21 +270,6 @@ export function ConfiguracionView() {
               onChange={(e) => setForm({ ...form, telefono: e.target.value })}
               className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              URL del formulario de inscripción
-            </label>
-            <input
-              type="text"
-              placeholder="https://forms.gle/..."
-              value={form.formularioInscripcionUrl ?? ""}
-              onChange={(e) => setForm({ ...form, formularioInscripcionUrl: e.target.value })}
-              className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Se usa en el botón &quot;Compartir&quot; de la vista de Socios para enlazar a un formulario externo (por ejemplo, Google Forms).
-            </p>
           </div>
         </div>
         <div className="pt-2 flex items-center gap-3">
@@ -305,21 +408,48 @@ export function ConfiguracionView() {
         </div>
 
         <div className="pt-2 flex flex-col sm:flex-row gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={handleArchivoSeleccionado}
+          />
           <button
-            disabled
-            title="Próximamente"
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-medium opacity-50 cursor-not-allowed"
+            onClick={handleImportarClick}
+            disabled={importing}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Upload size={16} /> Importar socios (CSV)
+            <Upload size={16} /> {importing ? "Importando..." : "Importar socios (CSV)"}
           </button>
           <button
-            disabled
-            title="Próximamente"
-            className="flex items-center justify-center gap-2 px-4 py-2 border rounded-md text-sm font-medium text-gray-700 opacity-50 cursor-not-allowed"
+            onClick={handleDescargarPlantilla}
+            className="flex items-center justify-center gap-2 px-4 py-2 border rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <Download size={16} /> Descargar plantilla
           </button>
         </div>
+
+        {importResult && (
+          <div
+            className={`text-sm rounded-md border p-3 ${
+              importResult.errores.length > 0
+                ? "bg-yellow-50 border-yellow-200 text-yellow-800"
+                : "bg-green-50 border-green-200 text-green-800"
+            }`}
+          >
+            <p>
+              Se importaron <span className="font-medium">{importResult.ok}</span> socios.
+            </p>
+            {importResult.errores.length > 0 && (
+              <ul className="mt-1 list-disc list-inside space-y-0.5">
+                {importResult.errores.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Acerca de */}

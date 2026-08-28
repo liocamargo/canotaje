@@ -10,7 +10,7 @@ export function BottomTabBar({
   setActiveTab: (tab: TabId) => void;
 }) {
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t flex">
+    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t flex">
       {NAV_ITEMS.map((item) => (
         <button
           key={item.id}

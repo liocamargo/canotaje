@@ -7,7 +7,8 @@ App interna para gestionar socios, pagos, actividades y colaboradores del club. 
 - **Next.js 16** (App Router, TypeScript, Tailwind v4) — todo el panel es client-side (Firebase SDK corre en el navegador).
 - **Firebase Auth** — login por enlace de email (passwordless) y por Google.
 - **Firestore** — base de datos en tiempo real (`onSnapshot` en todos los listados).
-- **Vercel** — hosting del frontend. Firebase sólo se usa para Auth + Firestore, no para hosting.
+- **Firebase Storage** — comprobantes de inscripción adjuntados en el alta de un socio.
+- **Vercel** — hosting del frontend. Firebase sólo se usa para Auth + Firestore + Storage, no para hosting.
 
 ## Proyecto Firebase
 
@@ -19,6 +20,7 @@ Ya está creado: `canotaje` (https://console.firebase.google.com/project/canotaj
 2. **Authentication → Settings → Authorized domains**
    - Agregar el dominio de Vercel de producción (ej. `canotaje.vercel.app` o tu dominio propio) y cualquier preview domain que uses seguido.
 3. **Firestore Database** → crear la base en modo producción (las reglas de seguridad están en `firestore.rules`, no dejes la base en "modo de prueba").
+4. **Storage** → si todavía no lo activaste, entrá a la sección Storage y hacé clic en "Comenzar" (elegí modo producción). Sin este paso, subir el comprobante de inscripción de un socio va a fallar.
 
 ## Cómo funciona el acceso (importante)
 
@@ -38,18 +40,18 @@ npm run dev
 
 Las credenciales del proyecto Firebase ya están en `.env.local` (no se sube a git). Si cloná el repo en otra máquina, copiá `.env.local.example` a `.env.local` y completá los valores desde **Firebase Console → Configuración del proyecto → Tus apps → SDK setup and configuration**.
 
-## Desplegar las reglas de Firestore
+## Desplegar las reglas de Firestore y Storage
 
-Las reglas (`firestore.rules`) no se despliegan solas — hace falta el Firebase CLI:
+Las reglas (`firestore.rules`, `storage.rules`) no se despliegan solas — hace falta el Firebase CLI:
 
 ```bash
 npm install -g firebase-tools   # una sola vez
 firebase login
 firebase use canotaje           # sólo la primera vez, o firebase init si pide vincular
-firebase deploy --only firestore:rules
+firebase deploy --only firestore:rules,storage
 ```
 
-Corré esto cada vez que edites `firestore.rules` (por ejemplo, al cambiar la lista de bootstrap admins o al agregar una colección nueva).
+Corré esto cada vez que edites `firestore.rules` o `storage.rules` (por ejemplo, al cambiar la lista de bootstrap admins o al agregar una colección nueva).
 
 ## Desplegar en Vercel
 
@@ -74,12 +76,12 @@ src/
     types.ts                # tipos de todas las entidades
     auth/AuthProvider.tsx    # estado de sesión + activación/bootstrap de staff
     data/                     # un hook + funciones CRUD por colección de Firestore
-firestore.rules              # reglas de seguridad (fuente de verdad de permisos)
+firestore.rules              # reglas de seguridad de Firestore (fuente de verdad de permisos)
+storage.rules                 # reglas de seguridad de Storage (comprobantes de inscripción)
 _mockup/                      # diseño original de Claude Design, sólo de referencia — no se usa en la app
 ```
 
 ## Qué falta / próximos pasos
 
 - Envío real de emails (recordatorios de pago, comprobantes) — hoy esos botones están deshabilitados, requieren un servicio de email (Resend, SendGrid, etc.) detrás de una función serverless.
-- Importación/exportación de socios por CSV.
 - Permisos más finos por rol (hoy cualquier `staff` puede editar cualquier colección operativa; sólo la gestión de colaboradores está restringida a `admin`).

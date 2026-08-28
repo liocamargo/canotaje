@@ -12,7 +12,7 @@ export function MiCuentaView() {
   const { user, staff } = useAuth();
 
   return (
-    <div className="p-8 max-w-2xl mx-auto space-y-6">
+    <div className="px-4 lg:px-6 py-6 space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-gray-900">Mi cuenta</h3>
         <p className="text-sm text-gray-500">Tu información de acceso al panel</p>

@@ -19,7 +19,7 @@ export function Sidebar({
 
   return (
     <div
-      className={`hidden md:flex md:flex-col md:justify-between bg-[#f8f9fa] border-r h-screen fixed left-0 top-0 transition-all duration-200 ${
+      className={`hidden lg:flex lg:flex-col lg:justify-between bg-[#f8f9fa] border-r h-screen fixed left-0 top-0 transition-all duration-200 ${
         collapsed ? "w-16" : "w-64"
       }`}
     >

@@ -18,12 +18,15 @@ export type SocioDeuda = "Admin" | "Al día" | "Debe cuota";
 
 export interface Socio {
   id: string;
-  nombre: string;
-  apellido: string;
+  nombreCompleto: string;
   email: string;
   dni: string;
   telefono?: string;
   fechaNacimiento?: string;
+  contactoEmergencia?: string;
+  categoria?: string;
+  condicionMedica?: string;
+  comprobanteInscripcionUrl?: string;
   estado: SocioEstado;
   deuda: SocioDeuda;
   grupoFamiliar?: string | null;
@@ -89,5 +92,4 @@ export interface ClubConfig {
   telefono?: string;
   diaVencimiento: number;
   enviarEmails: boolean;
-  formularioInscripcionUrl?: string;
 }

@@ -13,7 +13,6 @@ export const DEFAULT_CONFIG: ClubConfig = {
   telefono: "",
   diaVencimiento: 10,
   enviarEmails: true,
-  formularioInscripcionUrl: "",
 };
 
 export function useClubConfig() {

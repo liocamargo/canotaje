@@ -115,7 +115,7 @@ export function ColaboradoresView() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="px-4 lg:px-6 py-6">
       {/* Header & Tabs */}
       <div className="flex justify-between items-start mb-6 border-b pb-4">
         <div>
