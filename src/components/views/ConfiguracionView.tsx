@@ -322,6 +322,9 @@ export function ConfiguracionView() {
         </div>
       </div>
 
+      {/* Acerca de */}
+      <p className="text-xs text-gray-400 text-center">Canotaje Córdoba · v1.0.0</p>
+
       {/* Modal de Nuevo Tipo de Cuota */}
       {showNuevoTipo && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">

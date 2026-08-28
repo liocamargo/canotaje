@@ -1,40 +1,34 @@
 "use client";
 
-import { LogOut, Settings } from "lucide-react";
-import { useAuth } from "@/lib/auth/AuthProvider";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ProfileMenu } from "@/components/layout/ProfileMenu";
 
-export function Header({ title, subtitle }: { title: string; subtitle: string }) {
-  const { user, logOut } = useAuth();
-  const initials = (user?.displayName ?? user?.email ?? "?")
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .substring(0, 2)
-    .toUpperCase();
-
+export function Header({
+  title,
+  collapsed,
+  onToggleCollapsed,
+  onAccount,
+}: {
+  title: string;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+  onAccount: () => void;
+}) {
   return (
-    <header className="bg-white border-b px-4 md:px-8 py-4 flex justify-between items-center sticky top-0 z-10">
-      <div>
-        <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
-        <p className="text-sm text-gray-500">{subtitle}</p>
-      </div>
-      <div className="flex items-center gap-2 md:gap-4">
-        <button className="p-2 hover:bg-gray-100 rounded-full">
-          <Settings size={18} className="text-gray-600" />
-        </button>
+    <header className="h-16 bg-white border-b px-4 md:px-6 flex items-center justify-between sticky top-0 z-10">
+      <div className="flex items-center gap-3 min-w-0">
         <button
-          onClick={() => logOut()}
-          className="md:hidden p-2 hover:bg-gray-100 rounded-full"
-          title="Cerrar sesión"
+          onClick={onToggleCollapsed}
+          title={collapsed ? "Expandir menú" : "Achicar menú a solo íconos"}
+          className="hidden md:flex p-2 hover:bg-gray-100 rounded-full text-gray-600 shrink-0"
         >
-          <LogOut size={18} className="text-gray-600" />
+          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
         </button>
-        <div
-          title={user?.email ?? ""}
-          className="w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center text-sm font-medium"
-        >
-          {initials}
-        </div>
+        <h2 className="text-xl font-semibold text-gray-800 truncate">{title}</h2>
+      </div>
+
+      <div className="md:hidden">
+        <ProfileMenu variant="header" onAccount={onAccount} />
       </div>
     </header>
   );

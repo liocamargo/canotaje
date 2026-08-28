@@ -1,15 +1,14 @@
 import { Activity, Briefcase, CreditCard, Home, Settings, Users } from "lucide-react";
 
 export type TabId =
-  | "inicio"
   | "socios"
   | "pagos"
   | "actividades"
   | "colaboradores"
-  | "configuracion";
+  | "configuracion"
+  | "cuenta";
 
 export const NAV_ITEMS: { id: TabId; icon: typeof Home; label: string }[] = [
-  { id: "inicio", icon: Home, label: "Inicio" },
   { id: "socios", icon: Users, label: "Socios" },
   { id: "pagos", icon: CreditCard, label: "Pagos" },
   { id: "actividades", icon: Activity, label: "Actividades" },
