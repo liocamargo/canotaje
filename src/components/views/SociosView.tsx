@@ -29,7 +29,7 @@ import { downloadCsv, toCsv } from "@/lib/csv";
 import type { Pago, Socio, SocioDeuda, SocioEstado } from "@/lib/types";
 
 type SocioTab = "perfil" | "historial" | "asistencia";
-type ColumnKey = "nombre" | "email" | "dni" | "telefono" | "tipoCuota";
+type ColumnKey = "nombre" | "email" | "dni" | "telefono" | "tipoCuota" | "grupo";
 
 const COLUMN_LABELS: Record<ColumnKey, string> = {
   nombre: "Nombre",
@@ -37,8 +37,9 @@ const COLUMN_LABELS: Record<ColumnKey, string> = {
   dni: "DNI",
   telefono: "Teléfono",
   tipoCuota: "Tipo de cuota",
+  grupo: "Grupo",
 };
-const COLUMN_KEYS: ColumnKey[] = ["nombre", "email", "dni", "telefono", "tipoCuota"];
+const COLUMN_KEYS: ColumnKey[] = ["nombre", "email", "dni", "telefono", "tipoCuota", "grupo"];
 const COLUMNS_STORAGE_KEY = "canotaje:sociosColumnas";
 const PAGE_SIZE = 14;
 
@@ -97,6 +98,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
   const [searchTerm, setSearchTerm] = useState("");
   const [estadoFilter, setEstadoFilter] = useState<"todos" | SocioEstado>("todos");
   const [deudaFilter, setDeudaFilter] = useState<"todas" | SocioDeuda>("todas");
+  const [grupoFilter, setGrupoFilter] = useState<"todos" | "sin-grupo" | string>("todos");
   const [form, setForm] = useState(EMPTY_FORM);
   const [comprobanteFile, setComprobanteFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -107,6 +109,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
     dni: true,
     telefono: true,
     tipoCuota: true,
+    grupo: true,
   });
   const [page, setPage] = useState(1);
 
@@ -188,12 +191,15 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
       socio.email.toLowerCase().includes(term);
     const matchesEstado = estadoFilter === "todos" || socio.estado === estadoFilter;
     const matchesDeuda = deudaFilter === "todas" || socio.deuda === deudaFilter;
-    return matchesSearch && matchesEstado && matchesDeuda;
+    const matchesGrupo =
+      grupoFilter === "todos" ||
+      (grupoFilter === "sin-grupo" ? !socio.grupoId : socio.grupoId === grupoFilter);
+    return matchesSearch && matchesEstado && matchesDeuda && matchesGrupo;
   });
 
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, estadoFilter, deudaFilter]);
+  }, [searchTerm, estadoFilter, deudaFilter, grupoFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSocios.length / PAGE_SIZE));
   const paginaActual = Math.min(page, totalPages);
@@ -211,6 +217,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
         if (c === "email") return s.email;
         if (c === "dni") return s.dni;
         if (c === "telefono") return s.telefono ?? "";
+        if (c === "grupo") return grupos.find((g) => g.id === s.grupoId)?.nombre ?? "";
         return tiposCuota.find((t) => t.id === s.tipoCuotaId)?.nombre ?? "";
       })
     );
@@ -324,6 +331,22 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                 <option value="Debe cuota">Deuda</option>
               </select>
             </div>
+            <div className="w-40">
+              <label className="block text-xs text-gray-500 mb-1">Grupo</label>
+              <select
+                value={grupoFilter}
+                onChange={(e) => setGrupoFilter(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-gray-900"
+              >
+                <option value="todos">Todos</option>
+                <option value="sin-grupo">Sin grupo</option>
+                {grupos.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Buscador, exportar, columnas */}
@@ -340,16 +363,18 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
             </div>
             <button
               onClick={handleExportar}
-              className="flex items-center gap-2 px-3 py-2 border rounded-md text-sm font-medium hover:bg-gray-50 text-gray-700"
+              title="Exportar"
+              className="p-2 border rounded-md hover:bg-gray-50 text-gray-700"
             >
-              <Download size={16} /> Exportar
+              <Download size={16} />
             </button>
             <div className="relative">
               <button
                 onClick={() => setShowColumnasMenu((o) => !o)}
-                className="flex items-center gap-2 px-3 py-2 border rounded-md text-sm font-medium hover:bg-gray-50 text-gray-700"
+                title="Columnas"
+                className="p-2 border rounded-md hover:bg-gray-50 text-gray-700"
               >
-                <Columns3 size={16} /> Columnas
+                <Columns3 size={16} />
               </button>
               {showColumnasMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg py-2 z-20">
@@ -393,6 +418,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                 {visibleColumns.tipoCuota && (
                   <th className="px-6 py-3 font-medium text-gray-500">Tipo de cuota</th>
                 )}
+                {visibleColumns.grupo && <th className="px-6 py-3 font-medium text-gray-500">Grupo</th>}
               </tr>
             )}
           </thead>
@@ -472,6 +498,11 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                               <span className="text-gray-600 bg-gray-100 px-2 py-1 rounded-md text-xs font-medium">
                                 {tiposCuota.find((c) => c.id === socio.tipoCuotaId)?.nombre || "Estándar"}
                               </span>
+                            </td>
+                          )}
+                          {visibleColumns.grupo && (
+                            <td className="px-6 py-4 text-gray-600">
+                              {grupos.find((g) => g.id === socio.grupoId)?.nombre || "—"}
                             </td>
                           )}
                         </>
