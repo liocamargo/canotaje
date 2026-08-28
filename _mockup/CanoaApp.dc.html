@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @font-face { font-family: fallback; src: local(Helvetica); }
+    body { margin: 0; }
+    .canoa-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+    .canoa-scroll::-webkit-scrollbar-thumb { background: #e4e4e7; border-radius: 4px; }
+    a { color: #09090b; }
+    a:hover { color: #27272a; }
+  </style>
+</helmet>
+<div style="display:flex;height:100vh;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#09090b;overflow:hidden">
+
+  <div style="{{ sidebarStyle }}">
+    <div>
+      <div style="height:64px;box-sizing:border-box;padding:0 16px;border-bottom:1px solid #e4e4e7;position:relative">
+        <sc-if value="{{ orgMenuOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:64px;left:8px;right:8px;background:white;border:1px solid #e4e4e7;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);overflow:hidden;z-index:30">
+            <sc-for list="{{ orgOptions }}" as="org" hint-placeholder-count="3">
+              <button onClick="{{ org.onClick }}" style="{{ org.style }}">
+                <div style="width:22px;height:22px;background:#e4e4e7;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-weight:700;color:#71717a;font-size:10px">{{ org.iniciales }}</span></div>
+                {{ org.nombre }}
+              </button>
+            </sc-for>
+            <div style="border-top:1px solid #f4f4f5"></div>
+            <button onClick="{{ createOrg }}" style="width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;border:none;background:none;cursor:pointer;font-size:13px;color:#27272a;text-align:left">{{ plusIcon }} Crear nueva institución</button>
+          </div>
+        </sc-if>
+        <button onClick="{{ toggleOrgMenu }}" style="width:100%;height:100%;display:flex;align-items:center;gap:12px;border:none;background:none;cursor:pointer;text-align:left;padding:0">
+          <div style="width:32px;height:32px;background:#e4e4e7;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <span style="font-weight:700;color:#71717a;font-size:12px">{{ activeOrg.iniciales }}</span>
+          </div>
+          <sc-if value="{{ sidebarExpanded }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <h1 style="font-weight:600;font-size:14px;margin:0;white-space:nowrap">{{ activeOrg.nombre }}</h1>
+              <p style="font-size:12px;color:#71717a;margin:0;white-space:nowrap">Administrador</p>
+            </div>
+          </sc-if>
+        </button>
+      </div>
+      <nav style="padding:16px;display:flex;flex-direction:column;gap:4px">
+        <sc-for list="{{ menuItems }}" as="item" hint-placeholder-count="6">
+          <button onClick="{{ item.onClick }}" style="{{ item.style }}">
+            {{ item.icon }}
+            <sc-if value="{{ sidebarExpanded }}" hint-placeholder-val="{{ true }}">
+              <span style="white-space:nowrap">{{ item.label }}</span>
+            </sc-if>
+          </button>
+        </sc-for>
+      </nav>
+    </div>
+    <div style="padding:16px;border-top:1px solid #e4e4e7;position:relative">
+      <sc-if value="{{ userMenuOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;bottom:64px;left:16px;right:16px;background:white;border:1px solid #e4e4e7;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.1);overflow:hidden;z-index:20">
+          <button onClick="{{ openMiCuenta }}" style="width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;border:none;background:none;cursor:pointer;font-size:13px;color:#27272a;text-align:left">{{ userIconSm }} Mi cuenta</button>
+          <div style="border-top:1px solid #f4f4f5"></div>
+          <button onClick="{{ logoutClick }}" style="width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;border:none;background:none;cursor:pointer;font-size:13px;color:#27272a;text-align:left">{{ logoutIcon }} Cerrar sesión</button>
+        </div>
+      </sc-if>
+      <button onClick="{{ toggleUserMenu }}" style="width:100%;display:flex;align-items:center;gap:10px;padding:8px 12px;border:none;background:none;cursor:pointer;border-radius:6px;text-align:left">
+        <div style="width:28px;height:28px;background:#09090b;color:white;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex-shrink:0">CE</div>
+        <sc-if value="{{ sidebarExpanded }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;min-width:0">
+            <p style="font-size:13px;font-weight:500;margin:0;color:#09090b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Camargo Ezequiel</p>
+            <p style="font-size:11px;color:#71717a;margin:0">Ver cuenta</p>
+          </div>
+        </sc-if>
+      </button>
+    </div>
+  </div>
+
+  <main style="flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden">
+    <header style="height:64px;box-sizing:border-box;background:white;border-bottom:1px solid #e4e4e7;padding:0 32px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:16px">
+        <button onClick="{{ toggleSidebar }}" style="border:none;background:none;color:#71717a;cursor:pointer;display:flex;padding:4px">{{ panelLeftIcon }}</button>
+        <div style="display:flex;align-items:center;gap:6px">
+          <sc-for list="{{ breadcrumbSegments }}" as="seg" hint-placeholder-count="1">
+            <span style="{{ seg.sepStyle }}">/</span>
+            <sc-if value="{{ seg.clickable }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ seg.onClick }}" style="border:none;background:none;cursor:pointer;padding:0;font-size:20px;font-weight:600;color:#a1a1aa">{{ seg.label }}</button>
+            </sc-if>
+            <sc-if value="{{ seg.notClickable }}" hint-placeholder-val="{{ true }}">
+              <h2 style="font-size:20px;font-weight:600;color:#18181b;margin:0">{{ seg.label }}</h2>
+            </sc-if>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <sc-if value="{{ showActividadesHeaderActions }}" hint-placeholder-val="{{ false }}">
+          <button style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#09090b;color:white;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">{{ plusIcon }} Nueva actividad</button>
+        </sc-if>
+        <sc-if value="{{ showPagosHeaderActions }}" hint-placeholder-val="{{ false }}">
+          <button style="display:flex;align-items:center;justify-content:center;padding:8px;border:1px solid #e4e4e7;border-radius:6px;background:white;color:#27272a;cursor:pointer" title="Exportar">{{ downloadIcon }}</button>
+          <button style="display:flex;align-items:center;justify-content:center;padding:8px;border:1px solid #e4e4e7;border-radius:6px;background:white;color:#27272a;cursor:pointer" title="Enviar recordatorios">{{ mailIcon }}</button>
+          <button onClick="{{ openNewPagoModal }}" style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#09090b;color:white;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">{{ creditCardIcon }} Registrar pago</button>
+        </sc-if>
+        <sc-if value="{{ showSociosHeaderActions }}" hint-placeholder-val="{{ false }}">
+          <div style="position:relative">
+            <button onClick="{{ toggleShareMenu }}" title="Compartir" style="{{ shareButtonStyle }}">{{ shareIcon }}</button>
+            <sc-if value="{{ shareMenuOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;top:44px;right:0;width:320px;background:white;border:1px solid #e4e4e7;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:16px;z-index:30">
+                <p style="font-size:13px;font-weight:600;color:#09090b;margin:0 0 8px">Enlace de inscripción pública</p>
+                <div style="display:flex;gap:8px;margin-bottom:12px">
+                  <input readOnly="{{ true }}" value="{{ publicLinkUrl }}" style="flex:1;padding:6px 10px;border:1px solid #e4e4e7;border-radius:6px;font-size:12px;color:#52525b;background:#fafafa;min-width:0">
+                  <button onClick="{{ copyLink }}" style="padding:6px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:12px;font-weight:500;background:white;cursor:pointer;white-space:nowrap">{{ shareLabel }}</button>
+                </div>
+                <div style="border-top:1px solid #f4f4f5;padding-top:12px;display:flex;justify-content:space-between;align-items:center">
+                  <div>
+                    <p style="font-size:13px;font-weight:500;color:#09090b;margin:0">Formulario público</p>
+                    <p style="font-size:12px;color:#71717a;margin:0">{{ publicFormStatusLabel }}</p>
+                  </div>
+                  <button onClick="{{ togglePublicForm }}" style="{{ publicFormToggleStyle }}"><div style="{{ publicFormThumbStyle }}"></div></button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+          <button onClick="{{ startAttendance }}" style="display:flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;font-weight:500;background:white;color:#27272a;cursor:pointer">{{ checkIcon }} Asistencia</button>
+          <button onClick="{{ startBulkPayment }}" style="display:flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;font-weight:500;background:white;color:#27272a;cursor:pointer">{{ creditCardIcon }} Registrar pago</button>
+          <button onClick="{{ openNewSocioModal }}" style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#09090b;color:white;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">{{ plusIcon }} Nuevo socio</button>
+        </sc-if>
+      </div>
+    </header>
+
+    <div class="canoa-scroll" style="flex:1;overflow-y:auto">
+
+      <sc-if value="{{ isInicio }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:24px 32px;display:flex;flex-direction:column;gap:24px">
+          <div style="display:flex;background:#f4f4f5;padding:4px;border-radius:8px;width:fit-content">
+            <button style="padding:6px 24px;background:white;box-shadow:0 1px 2px rgba(0,0,0,0.05);border-radius:6px;font-size:14px;font-weight:500;border:none;cursor:pointer">Resumen</button>
+            <button style="padding:6px 24px;font-size:14px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer">Finanzas</button>
+            <button style="padding:6px 24px;font-size:14px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer">Socios</button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px">
+            <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e4e4e7;box-shadow:0 1px 2px rgba(0,0,0,0.04)">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+                <h3 style="font-size:14px;font-weight:500;color:#71717a;margin:0">Total Socios</h3>
+                <div style="padding:8px;background:#ffffff;border-radius:8px;display:flex">{{ usersIconSm }}</div>
+              </div>
+              <p style="font-size:24px;font-weight:700;margin:0">{{ kpi.total }}</p>
+            </div>
+            <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e4e4e7;box-shadow:0 1px 2px rgba(0,0,0,0.04)">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+                <h3 style="font-size:14px;font-weight:500;color:#71717a;margin:0">Pagados este mes</h3>
+                <div style="padding:8px;background:#ffffff;border-radius:8px;display:flex">{{ checkIconSm }}</div>
+              </div>
+              <p style="font-size:24px;font-weight:700;margin:0">{{ kpi.pagados }}</p>
+            </div>
+            <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e4e4e7;box-shadow:0 1px 2px rgba(0,0,0,0.04)">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+                <h3 style="font-size:14px;font-weight:500;color:#71717a;margin:0">Pendientes</h3>
+                <div style="padding:8px;background:#ffffff;border-radius:8px;display:flex">{{ alertIconSm }}</div>
+              </div>
+              <p style="font-size:24px;font-weight:700;margin:0">{{ kpi.pendientes }}</p>
+            </div>
+            <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e4e4e7;box-shadow:0 1px 2px rgba(0,0,0,0.04);display:flex;flex-direction:column;justify-content:space-between">
+              <div>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+                  <h3 style="font-size:14px;font-weight:500;color:#71717a;margin:0">Recaudado</h3>
+                  <div style="padding:8px;background:#ffffff;border-radius:8px;display:flex;align-items:center;justify-content:center"><span style="color:#a1a1aa;font-weight:700;font-size:13px">$</span></div>
+                </div>
+                <p style="font-size:24px;font-weight:700;margin:0">{{ kpi.recaudado }}</p>
+              </div>
+              <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <p style="font-size:12px;font-weight:500;color:#71717a;margin:0 0 4px">Tasa de morosidad</p>
+                  <p style="font-size:14px;font-weight:700;margin:0">{{ kpi.morosidad }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e4e4e7;box-shadow:0 1px 2px rgba(0,0,0,0.04)">
+            <h3 style="font-size:14px;font-weight:600;margin:0 0 24px">Pagos últimos 6 meses</h3>
+            <div style="height:220px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:0 8px 8px">
+              <sc-for list="{{ chartBars }}" as="bar" hint-placeholder-count="6">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;height:100%;justify-content:flex-end">
+                  <div style="{{ bar.style }}"></div>
+                  <span style="font-size:12px;color:#a1a1aa">{{ bar.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isSocios }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:24px 32px">
+
+          <sc-if value="{{ showNewSocioModal }}" hint-placeholder-val="{{ false }}">
+            <div style="width:100%;background:white;border:1px solid #e4e4e7;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,0.04);padding:32px;box-sizing:border-box">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+                <h3 style="font-size:18px;font-weight:600;margin:0">Nuevo Socio</h3>
+                <button onClick="{{ closeNewSocioModal }}" style="border:none;background:none;color:#a1a1aa;cursor:pointer;display:flex">{{ xIcon }}</button>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:24px">
+                <div style="display:flex;flex-direction:column;gap:16px">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                    <div>
+                      <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Nombre *</label>
+                      <input type="text" placeholder="Juan" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Apellido *</label>
+                      <input type="text" placeholder="Pérez" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+                    </div>
+                  </div><div>
+                    <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Email *</label>
+                    <input type="email" placeholder="juan@email.com" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                    <div>
+                      <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">DNI *</label>
+                      <input type="text" placeholder="12345678" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Teléfono *</label>
+                      <input type="text" placeholder="11-2345-6789" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+                    </div>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Grupo Familiar (opcional)</label>
+                    <select style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;background:white">
+                      <option>Ninguno</option>
+                      <sc-for list="{{ grupoFamiliarOptions }}" as="grupo" hint-placeholder-count="2">
+                        <option>{{ grupo }}</option>
+                      </sc-for>
+                    </select>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                    <div>
+                      <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Fecha de nacimiento</label>
+                      <input type="text" placeholder="dd/mm/aaaa" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Contacto de emergencia</label>
+                      <input type="text" placeholder="Nombre - Teléfono" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+                    </div>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">¿Alguna condición médica o alergia que debamos conocer?</label>
+                    <textarea rows="2" placeholder="Ej: Ninguna" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box;font-family:inherit;resize:vertical"></textarea>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Adjuntar comprobante de inscripción</label>
+                    <button type="button" style="display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;font-weight:500;background:white;cursor:pointer">{{ uploadIcon }} Subir archivo</button>
+                  </div>
+                </div>
+                <div style="padding-top:16px;border-top:1px solid #e4e4e7">
+                  <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Tipo de cuota mensual</label>
+                  <select style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;background:white">
+                    <sc-for list="{{ tiposCuota }}" as="tipo" hint-placeholder-count="4">
+                      <option>{{ tipo.nombre }} - ${{ tipo.monto }}</option>
+                    </sc-for>
+                  </select>
+                </div>
+                <div style="padding-top:8px">
+                  <button type="button" onClick="{{ closeNewSocioModal }}" style="width:100%;padding:10px 16px;background:#09090b;color:white;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">Guardar</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ notShowNewSocioModal }}" hint-placeholder-val="{{ true }}">
+          <div>
+
+            <sc-if value="{{ isTakingAttendance }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;background:#09090b;padding:16px;border-radius:12px;color:white">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+                  <div>
+                    <h3 style="font-weight:600;font-size:17px;margin:0">Control de Asistencia</h3>
+                    <p style="font-size:12px;color:#d4d4d8;margin:0">Tocá para marcar presente. Se guarda solo.</p>
+                  </div>
+                  <button onClick="{{ stopAttendance }}" style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:white;color:#09090b;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">{{ xIconDark }} Finalizar</button>
+                </div>
+                <div style="display:flex;gap:12px;padding-top:12px;border-top:1px solid #27272a;flex-wrap:wrap">
+                  <select value="{{ attendanceNivelFilter }}" onChange="{{ onAttendanceNivelChange }}" style="padding:6px 12px;background:#18181b;border:1px solid #27272a;border-radius:6px;font-size:14px;color:white">
+                    <option>Todos</option>
+                    <sc-for list="{{ nivelOptions }}" as="niv" hint-placeholder-count="2"><option>{{ niv }}</option></sc-for>
+                  </select>
+                  <select value="{{ attendanceEstadoFilter }}" onChange="{{ onAttendanceEstadoChange }}" style="padding:6px 12px;background:#18181b;border:1px solid #27272a;border-radius:6px;font-size:14px;color:white">
+                    <option>Activo</option><option>Pendiente</option><option>Todos</option>
+                  </select>
+                  <input type="date" value="{{ attendanceDate }}" onChange="{{ onAttendanceDateChange }}" style="padding:6px 12px;background:#18181b;border:1px solid #27272a;border-radius:6px;font-size:14px;color:white;color-scheme:dark">
+                  <div style="position:relative">
+                    {{ searchIconGray }}
+                    <input type="text" placeholder="Buscar alumno..." value="{{ searchTerm }}" onChange="{{ onSearchChange }}" style="padding:6px 12px 6px 32px;background:#18181b;border:1px solid #27272a;border-radius:6px;font-size:14px;color:white;width:220px">
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isBulkPayment }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;background:#09090b;padding:16px;border-radius:12px;color:white">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+                  <div>
+                    <h3 style="font-weight:600;font-size:17px;margin:0">Registrar pagos</h3>
+                    <p style="font-size:12px;color:#d4d4d8;margin:0">Marcá quién pagó y registralo de una sola vez.</p>
+                  </div>
+                  <button onClick="{{ stopBulkPayment }}" style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:white;color:#09090b;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">{{ xIconDark }} Finalizar</button>
+                </div>
+                <div style="display:flex;gap:12px;padding-top:12px;border-top:1px solid #27272a;flex-wrap:wrap;align-items:center">
+                  <label style="font-size:13px;color:#d4d4d8">Período</label>
+                  <select value="{{ bulkPaymentPeriod }}" onChange="{{ onBulkPaymentPeriodChange }}" style="padding:6px 12px;background:#18181b;border:1px solid #27272a;border-radius:6px;font-size:14px;color:white">
+                    <sc-for list="{{ periodOptions }}" as="per" hint-placeholder-count="3"><option>{{ per }}</option></sc-for>
+                  </select>
+                  <span style="font-size:13px;color:#d4d4d8;margin-left:auto">{{ bulkPaymentSelectedCount }} seleccionados</span>
+                  <button onClick="{{ confirmBulkPayment }}" disabled="{{ bulkPaymentNoneSelected }}" style="{{ confirmBulkPaymentStyle }}">{{ creditCardIcon }} Registrar {{ bulkPaymentSelectedCount }} pagos</button>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ notTakingAttendance }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;gap:16px;flex-wrap:wrap">
+                <div style="width:180px">
+                  <label style="display:block;font-size:12px;color:#71717a;margin-bottom:4px">Estado</label>
+                  <select style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;background:white">
+                    <option>Todos</option><option>Activos</option><option>Pendientes</option>
+                  </select>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <div style="position:relative;width:220px">
+                    {{ searchIconGray }}
+                    <input type="text" placeholder="Nombre, DNI o email..." value="{{ searchTerm }}" onChange="{{ onSearchChange }}" style="width:100%;padding:8px 12px 8px 32px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+                  </div>
+                  <button style="padding:8px;border:1px solid #e4e4e7;border-radius:6px;background:white;cursor:pointer;display:flex">{{ downloadIcon }}</button>
+                  <div style="position:relative">
+                    <button onClick="{{ toggleColumnsMenu }}" title="Columnas" style="padding:8px;border:1px solid #e4e4e7;border-radius:6px;background:white;cursor:pointer;display:flex;align-items:center;color:#27272a">{{ columnsIcon }}</button>
+                    <sc-if value="{{ columnsMenuOpen }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute;top:44px;right:0;width:220px;background:white;border:1px solid #e4e4e7;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:8px;z-index:30">
+                        <sc-for list="{{ columnOptions }}" as="col" hint-placeholder-count="6">
+                          <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:13px;color:#27272a;cursor:pointer;border-radius:6px">
+                            <input type="checkbox" checked="{{ col.visible }}" onChange="{{ col.onToggle }}">{{ col.label }}
+                          </label>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </sc-if>
+
+            <div style="background:white;border:1px solid #e4e4e7;border-radius:8px;overflow-x:auto;-webkit-overflow-scrolling:touch">
+              <table style="width:100%;table-layout:auto;text-align:left;font-size:14px;border-collapse:collapse;white-space:nowrap">
+                <thead style="background:#ffffff;border-bottom:1px solid #e4e4e7">
+                  <sc-if value="{{ isTakingAttendance }}" hint-placeholder-val="{{ false }}">
+                    <tr>
+                      <th style="padding:12px 24px;font-weight:500;color:#71717a;width:100%">Socio</th>
+                      <th style="padding:12px 24px;font-weight:500;color:#71717a;width:1%">DNI</th>
+                      <th style="padding:12px 24px;font-weight:500;color:#71717a;width:1%;text-align:right">Estado de asistencia</th>
+                    </tr>
+                  </sc-if>
+                  <sc-if value="{{ isBulkPayment }}" hint-placeholder-val="{{ false }}">
+                    <tr>
+                      <th style="padding:12px 24px;font-weight:500;color:#71717a;width:100%">Socio</th>
+                      <th style="padding:12px 24px;font-weight:500;color:#71717a;width:1%">Monto</th>
+                      <th style="padding:12px 24px;font-weight:500;color:#71717a;width:1%;text-align:right">Pagó</th>
+                    </tr>
+                  </sc-if>
+                  <sc-if value="{{ notTakingAttendance }}" hint-placeholder-val="{{ true }}">
+                    <tr>
+                      <th style="padding:12px 24px;font-weight:500;color:#71717a;width:100%">Socio</th>
+                      <sc-if value="{{ colEmail }}" hint-placeholder-val="{{ true }}"><th style="padding:12px 24px;font-weight:500;color:#71717a;width:1%">Email</th></sc-if>
+                      <sc-if value="{{ colTelefono }}" hint-placeholder-val="{{ true }}"><th style="padding:12px 24px;font-weight:500;color:#71717a;width:1%">Teléfono</th></sc-if>
+                      <sc-if value="{{ colDni }}" hint-placeholder-val="{{ true }}"><th style="padding:12px 24px;font-weight:500;color:#71717a;width:1%">DNI</th></sc-if>
+                      <sc-if value="{{ colTipoCuota }}" hint-placeholder-val="{{ true }}"><th style="padding:12px 24px;font-weight:500;color:#71717a;width:1%">Tipo de cuota</th></sc-if>
+                      <sc-if value="{{ colEstado }}" hint-placeholder-val="{{ true }}"><th style="padding:12px 24px;font-weight:500;color:#71717a;width:1%">Estado</th></sc-if>
+                      <sc-if value="{{ colMesActual }}" hint-placeholder-val="{{ true }}"><th style="padding:12px 24px;font-weight:500;color:#71717a;width:1%">Mes actual</th></sc-if>
+                    </tr>
+                  </sc-if>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ filteredSociosPage }}" as="socio" hint-placeholder-count="3">
+                    <tr onClick="{{ socio.onClick }}" style="{{ socio.rowStyle }}">
+                      <td style="padding:16px 24px;border-top:1px solid #f4f4f5">
+                        <p style="font-weight:500;margin:0;color:#09090b">{{ socio.nombre }}</p>
+                      </td>
+                      <sc-if value="{{ colEmailAndNotAttendance }}" hint-placeholder-val="{{ true }}">
+                        <td style="padding:16px 24px;border-top:1px solid #f4f4f5;color:#52525b">{{ socio.email }}</td>
+                      </sc-if>
+                      <sc-if value="{{ colTelefonoAndNotAttendance }}" hint-placeholder-val="{{ true }}">
+                        <td style="padding:16px 24px;border-top:1px solid #f4f4f5;color:#52525b">{{ socio.telefono }}</td>
+                      </sc-if>
+                      <sc-if value="{{ colDni }}" hint-placeholder-val="{{ true }}">
+                        <td style="padding:16px 24px;color:#52525b;border-top:1px solid #f4f4f5">{{ socio.dni }}</td>
+                      </sc-if>
+                      <sc-if value="{{ isTakingAttendance }}" hint-placeholder-val="{{ false }}">
+                        <td style="padding:16px 24px;text-align:right;border-top:1px solid #f4f4f5">
+                          <button onClick="{{ socio.toggleAttendance }}" style="{{ socio.attendanceButtonStyle }}">{{ socio.attendanceIcon }} {{ socio.attendanceLabel }}</button>
+                        </td>
+                      </sc-if>
+                      <sc-if value="{{ isBulkPayment }}" hint-placeholder-val="{{ false }}">
+                        <td style="padding:16px 24px;border-top:1px solid #f4f4f5;color:#52525b">{{ socio.montoCuota }}</td>
+                        <td style="padding:16px 24px;text-align:right;border-top:1px solid #f4f4f5">
+                          <input type="checkbox" checked="{{ socio.bulkChecked }}" onChange="{{ socio.toggleBulkPayment }}" style="width:18px;height:18px;cursor:pointer">
+                        </td>
+                      </sc-if>
+                      <sc-if value="{{ colTipoCuotaAndNotAttendance }}" hint-placeholder-val="{{ true }}">
+                        <td style="padding:16px 24px;border-top:1px solid #f4f4f5"><span style="color:#52525b;background:#f4f4f5;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:500">{{ socio.tipoCuotaNombre }}</span></td>
+                      </sc-if>
+                      <sc-if value="{{ colEstadoAndNotAttendance }}" hint-placeholder-val="{{ true }}">
+                        <td style="padding:16px 24px;border-top:1px solid #f4f4f5"><span style="{{ socio.estadoStyle }}">{{ socio.estado }}</span></td>
+                      </sc-if>
+                      <sc-if value="{{ colMesActualAndNotAttendance }}" hint-placeholder-val="{{ true }}">
+                        <td style="padding:16px 24px;border-top:1px solid #f4f4f5"><span style="{{ socio.deudaStyle }}">{{ socio.deuda }}</span></td>
+                      </sc-if>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
+              <span style="font-size:13px;color:#71717a">Página {{ sociosPage }} de {{ sociosTotalPages }} — {{ sociosCount }} socios</span>
+              <div style="display:flex;gap:8px">
+                <button onClick="{{ sociosPrevPage }}" disabled="{{ sociosOnFirstPage }}" style="{{ sociosPrevStyle }}">{{ arrowLeftIcon }}</button>
+                <button onClick="{{ sociosNextPage }}" disabled="{{ sociosOnLastPage }}" style="{{ sociosNextStyle }}">{{ arrowRightIcon }}</button>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ hasSelectedSocio }}" hint-placeholder-val="{{ false }}">
+            <div style="position:fixed;inset:0;z-index:50;display:flex;justify-content:flex-end">
+              <div onClick="{{ closeSocioDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,0.2);backdrop-filter:blur(1px)"></div>
+              <div style="position:relative;width:100%;max-width:420px;background:white;height:100%;box-shadow:-4px 0 24px rgba(0,0,0,0.1);display:flex;flex-direction:column;border-left:1px solid #e4e4e7">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:24px;border-bottom:1px solid #e4e4e7;background:#ffffff">
+                  <div style="display:flex;align-items:center;gap:16px">
+                    <div style="width:56px;height:56px;border-radius:9999px;background:white;border:1px solid #e4e4e7;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:#52525b">{{ selectedSocio.initials }}</div>
+                    <div>
+                      <h3 style="font-weight:600;font-size:17px;margin:0;color:#09090b">{{ selectedSocio.nombre }}</h3>
+                      <p style="font-size:14px;color:#71717a;margin:0">DNI: {{ selectedSocio.dni }}</p>
+                    </div>
+                  </div>
+                  <button onClick="{{ closeSocioDrawer }}" style="border:none;background:none;color:#a1a1aa;cursor:pointer;display:flex;padding:4px">{{ xIcon }}</button>
+                </div>
+                <div style="display:flex;padding:0 24px;border-bottom:1px solid #e4e4e7;gap:24px">
+                  <button onClick="{{ setSocioTabPerfil }}" style="{{ socioTabPerfilStyle }}">Perfil</button>
+                  <button onClick="{{ setSocioTabAsistencia }}" style="{{ socioTabAsistenciaStyle }}">Asistencia</button>
+                  <button onClick="{{ setSocioTabHistorial }}" style="{{ socioTabHistorialStyle }}">Pagos</button>
+                </div>
+                <div class="canoa-scroll" style="flex:1;overflow-y:auto;padding:24px">
+
+                  <sc-if value="{{ isSocioTabPerfil }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;flex-direction:column;gap:24px">
+                      <div style="background:#ffffff;padding:16px;border-radius:12px;border:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:center">
+                        <div>
+                          <p style="font-size:12px;color:#71717a;font-weight:500;margin:0 0 4px">Estado de cuenta</p>
+                          <span style="{{ selectedSocio.deudaStyle }}">{{ selectedSocio.deuda }}</span>
+                        </div>
+                        <div style="text-align:right">
+                          <p style="font-size:12px;color:#71717a;font-weight:500;margin:0 0 4px">Tipo de cuota</p>
+                          <span style="font-weight:500;color:#09090b">{{ selectedSocio.tipoCuotaNombre }}</span>
+                        </div>
+                      </div>
+                      <div style="border:1px solid #e4e4e7;border-radius:12px;padding:16px">
+                        <h4 style="font-size:14px;font-weight:600;color:#09090b;margin:0 0 12px">Contacto</h4>
+                        <div style="display:flex;flex-direction:column;gap:12px">
+                          <div style="display:flex;align-items:center;gap:12px;font-size:14px">
+                            <div style="padding:8px;background:#ffffff;border-radius:6px;border:1px solid #e4e4e7;color:#a1a1aa;display:flex">{{ mailIcon }}</div>
+                            <div><p style="color:#71717a;font-size:12px;font-weight:500;margin:0">Email</p><p style="color:#09090b;margin:0">{{ selectedSocio.email }}</p></div>
+                          </div>
+                          <div style="display:flex;align-items:center;gap:12px;font-size:14px">
+                            <div style="padding:8px;background:#ffffff;border-radius:6px;border:1px solid #e4e4e7;color:#a1a1aa;display:flex">{{ phoneIcon }}</div>
+                            <div><p style="color:#71717a;font-size:12px;font-weight:500;margin:0">Teléfono</p><p style="color:#09090b;margin:0">{{ selectedSocio.telefono }}</p></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div style="border:1px solid #e4e4e7;border-radius:12px;padding:16px">
+                        <h4 style="font-size:14px;font-weight:600;color:#09090b;margin:0 0 12px">Datos personales</h4>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                          <div><p style="color:#71717a;font-size:12px;font-weight:500;margin:0">Fecha de inscripción</p><p style="color:#09090b;margin:2px 0 0;font-size:14px">{{ selectedSocio.fechaInscripcion }}</p></div>
+                          <div><p style="color:#71717a;font-size:12px;font-weight:500;margin:0">Fecha de nacimiento</p><p style="color:#09090b;margin:2px 0 0;font-size:14px">{{ selectedSocio.fechaNacimiento }}</p></div>
+                          <div><p style="color:#71717a;font-size:12px;font-weight:500;margin:0">Contacto de emergencia</p><p style="color:#09090b;margin:2px 0 0;font-size:14px">{{ selectedSocio.contactoEmergencia }}</p></div>
+                        </div>
+                        <div style="margin-top:16px"><p style="color:#71717a;font-size:12px;font-weight:500;margin:0">Condición médica / alergias</p><p style="color:#09090b;margin:2px 0 0;font-size:14px">{{ selectedSocio.condicionMedica }}</p></div>
+                      </div>
+                      <div style="border:1px solid #e4e4e7;border-radius:12px;padding:16px">
+                        <h4 style="font-size:14px;font-weight:600;color:#09090b;margin:0 0 12px">Documentos adjuntos</h4>
+                        <div style="display:flex;flex-direction:column;gap:10px">
+                          <div><p style="color:#71717a;font-size:12px;font-weight:500;margin:0 0 6px">Comprobante de inscripción</p>{{ selectedSocio.comprobanteBlock }}</div>
+                          <div><p style="color:#71717a;font-size:12px;font-weight:500;margin:0 0 6px">Certificado médico</p>{{ selectedSocio.certificadoBlock }}</div>
+                          <div><p style="color:#71717a;font-size:12px;font-weight:500;margin:0 0 6px">Deslinde de responsabilidad</p>{{ selectedSocio.deslindeBlock }}</div>
+                        </div>
+                      </div>
+                      {{ selectedSocio.grupoFamiliarBlock }}
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ isSocioTabHistorial }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;flex-direction:column;gap:16px">
+                      <sc-for list="{{ selectedSocioPagos }}" as="pago" hint-placeholder-count="2">
+                        <div style="padding:16px;border:1px solid #e4e4e7;border-radius:12px;background:white;box-shadow:0 1px 2px rgba(0,0,0,0.03);display:flex;justify-content:space-between;align-items:center">
+                          <div><p style="font-weight:500;font-size:14px;color:#09090b;margin:0">{{ pago.periodo }}</p><p style="font-size:12px;color:#71717a;margin:0">{{ pago.fecha }} • {{ pago.metodo }}</p></div>
+                          <span style="font-weight:600;font-size:14px;color:#09090b">{{ pago.monto }}</span>
+                        </div>
+                      </sc-for>
+                      <sc-if value="{{ selectedSocioNoPagos }}" hint-placeholder-val="{{ false }}">
+                        <div style="text-align:center;padding:40px 0;font-size:14px;color:#71717a">No hay pagos registrados.</div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ isSocioTabAsistencia }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;flex-direction:column;gap:24px">
+                      <div style="background:#ffffff;padding:16px;border-radius:12px;border:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:center">
+                        <div><p style="font-size:12px;color:#71717a;font-weight:500;margin:0 0 4px">Asistencia este mes</p><p style="font-size:20px;font-weight:700;color:#09090b;margin:0">85%</p></div>
+                        <div style="text-align:right"><p style="font-size:12px;color:#71717a;font-weight:500;margin:0 0 4px">Clases tomadas</p><p style="font-size:14px;font-weight:600;color:#09090b;margin:0">6 de 7 clases</p></div>
+                      </div>
+                      <div>
+                        <h4 style="font-size:14px;font-weight:600;color:#09090b;margin:0 0 12px">Últimos registros</h4>
+                        <div style="border:1px solid #e4e4e7;border-radius:8px;overflow:hidden">
+                          <table style="width:100%;text-align:left;font-size:13px;border-collapse:collapse">
+                            <thead style="background:#fafafa;border-bottom:1px solid #e4e4e7">
+                              <tr>
+                                <th style="padding:8px 12px;font-weight:500;color:#71717a">Fecha</th>
+                                <th style="padding:8px 12px;font-weight:500;color:#71717a">Nivel</th>
+                                <th style="padding:8px 12px;font-weight:500;color:#71717a">Registrado por</th>
+                                <th style="padding:8px 12px;font-weight:500;color:#71717a;text-align:right">Estado</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <sc-for list="{{ asistenciaRegistrosPage }}" as="reg" hint-placeholder-count="5">
+                                <tr style="border-top:1px solid #f4f4f5">
+                                  <td style="padding:8px 12px;font-weight:500;color:#27272a">{{ reg.fecha }}</td>
+                                  <td style="padding:8px 12px;color:#52525b">{{ reg.nivel }}</td>
+                                  <td style="padding:8px 12px;color:#52525b">{{ reg.registradoPor }}</td>
+                                  <td style="padding:8px 12px;text-align:right"><span style="{{ reg.badgeStyle }}">{{ reg.icon }} {{ reg.label }}</span></td>
+                                </tr>
+                              </sc-for>
+                            </tbody>
+                          </table>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+                          <span style="font-size:12px;color:#71717a">Página {{ asistenciaPage }} de {{ asistenciaTotalPages }}</span>
+                          <div style="display:flex;gap:8px">
+                            <button onClick="{{ asistenciaPrevPage }}" disabled="{{ asistenciaOnFirstPage }}" style="{{ asistenciaPrevStyle }}">{{ arrowLeftIcon }}</button>
+                            <button onClick="{{ asistenciaNextPage }}" disabled="{{ asistenciaOnLastPage }}" style="{{ asistenciaNextStyle }}">{{ arrowRightIcon }}</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                </div>
+                <div style="padding:16px 24px;border-top:1px solid #e4e4e7;background:#ffffff">
+                  <button style="width:100%;padding:10px;background:#09090b;color:white;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">Registrar Pago</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isPagos }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:24px 32px">
+          <div style="margin-bottom:24px">
+            <p style="font-size:14px;color:#71717a;margin:0">Agosto de 2026 — 0 de {{ sociosCount }} socios pagaron</p>
+          </div>
+
+          <div style="margin-bottom:24px">
+            <div style="position:relative;width:220px;margin-bottom:24px">
+              {{ searchIconGray }}
+              <input type="text" placeholder="Buscar por nombre o DNI..." value="{{ searchTermPagos }}" onChange="{{ onSearchPagosChange }}" style="width:100%;padding:8px 12px 8px 32px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+            </div>
+            <div style="display:flex;gap:8px;border-bottom:1px solid #e4e4e7">
+              <button onClick="{{ setPagoTabEstado }}" style="{{ pagoTabEstadoStyle }}">Estado del mes</button>
+              <button onClick="{{ setPagoTabHistorial }}" style="{{ pagoTabHistorialStyle }}">Historial</button>
+            </div>
+          </div>
+
+          <div style="background:white;border:1px solid #e4e4e7;border-radius:8px;overflow-x:auto;-webkit-overflow-scrolling:touch">
+            <sc-if value="{{ isPagoTabHistorial }}" hint-placeholder-val="{{ false }}">
+              <table style="width:100%;min-width:640px;text-align:left;font-size:14px;border-collapse:collapse">
+                <thead style="background:#ffffff;border-bottom:1px solid #e4e4e7">
+                  <tr>
+                    <th style="padding:12px 24px;font-weight:500;color:#71717a">Socio</th>
+                    <th style="padding:12px 24px;font-weight:500;color:#71717a">Período</th>
+                    <th style="padding:12px 24px;font-weight:500;color:#71717a">Fecha de pago</th>
+                    <th style="padding:12px 24px;font-weight:500;color:#71717a">Método</th>
+                    <th style="padding:12px 24px;font-weight:500;color:#71717a;text-align:right">Monto</th>
+                    <th style="padding:12px 24px"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ filteredPagos }}" as="pago" hint-placeholder-count="3">
+                    <tr style="border-top:1px solid #f4f4f5">
+                      <td style="padding:16px 24px;font-weight:500;color:#09090b"><div style="display:flex;align-items:center;gap:12px"><div style="width:32px;height:32px;border-radius:6px;background:#f4f4f5;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:#52525b">{{ pago.initials }}</div>{{ pago.socio }}</div></td>
+                      <td style="padding:16px 24px;color:#52525b">{{ pago.periodo }}</td>
+                      <td style="padding:16px 24px;color:#52525b">{{ pago.fecha }}</td>
+                      <td style="padding:16px 24px;color:#52525b">{{ pago.metodo }}</td>
+                      <td style="padding:16px 24px;font-weight:600;color:#09090b;text-align:right">{{ pago.monto }}</td>
+                      <td style="padding:16px 24px;text-align:right"><button style="border:none;background:none;color:#a1a1aa;cursor:pointer;display:inline-flex;padding:4px">{{ fileIcon }}</button><button style="border:none;background:none;color:#a1a1aa;cursor:pointer;display:inline-flex;padding:4px">{{ trashIcon }}</button></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </sc-if>
+            <sc-if value="{{ isPagoTabEstado }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:40px 0;text-align:center;color:#71717a;font-size:14px">No se encontraron socios con pagos registrados este mes.</div>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ showNewPagoModal }}" hint-placeholder-val="{{ false }}">
+            <div style="position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px">
+              <div style="background:white;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.15);width:100%;max-width:480px;overflow:hidden">
+                <div style="padding:24px;border-bottom:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:center">
+                  <h3 style="font-weight:600;font-size:17px;margin:0">Registrar nuevo pago</h3>
+                  <button onClick="{{ closeNewPagoModal }}" style="border:none;background:none;color:#a1a1aa;cursor:pointer;display:flex">{{ xIcon }}</button>
+                </div>
+                <div style="padding:24px;display:flex;flex-direction:column;gap:24px">
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:500;color:#27272a;margin-bottom:4px">Buscar socio</label>
+                    <div style="position:relative">{{ searchIconGray }}<input type="text" placeholder="Buscar por nombre o DNI..." style="width:100%;padding:8px 12px 8px 32px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box"></div>
+                  </div>
+                  <div style="border:1px solid #e4e4e7;border-radius:8px;padding:16px;background:#ffffff">
+                    <p style="font-size:14px;font-weight:500;color:#dc2626;margin:0 0 12px;display:flex;align-items:center;gap:6px">{{ alertIcon }} A cobrar: $ 15.000</p>
+                    <table style="width:100%;text-align:left;font-size:14px">
+                      <thead style="font-size:12px;color:#71717a;border-bottom:1px solid #e4e4e7"><tr><th style="padding-bottom:8px;font-weight:500">Período</th><th style="padding-bottom:8px;font-weight:500">Esperado</th><th style="padding-bottom:8px;font-weight:500">Resta</th></tr></thead>
+                      <tbody><tr><td style="padding:8px 0;font-weight:500;color:#09090b">Agosto de 2026</td><td style="padding:8px 0;color:#52525b">$ 15.000</td><td style="padding:8px 0;color:#16a34a;font-weight:500">Saldado</td></tr></tbody>
+                    </table>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Monto a pagar</label>
+                    <input type="number" defaultValue="15000" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:500;margin-bottom:8px">Método de pago</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                      <button style="padding:8px 16px;background:#09090b;color:white;border:none;font-size:14px;font-weight:500;border-radius:6px;cursor:pointer">Efectivo</button>
+                      <button style="padding:8px 16px;border:1px solid #e4e4e7;background:white;color:#27272a;font-size:14px;font-weight:500;border-radius:6px;cursor:pointer">Transferencia</button>
+                      <button style="padding:8px 16px;border:1px solid #e4e4e7;background:white;color:#27272a;font-size:14px;font-weight:500;border-radius:6px;cursor:pointer">Tarjeta</button>
+                    </div>
+                  </div>
+                </div>
+                <div style="padding:16px 24px;border-top:1px solid #e4e4e7;background:#ffffff;display:flex;justify-content:flex-end;gap:12px">
+                  <button onClick="{{ closeNewPagoModal }}" style="padding:8px 16px;border:1px solid #e4e4e7;background:white;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">Cancelar</button>
+                  <button onClick="{{ closeNewPagoModal }}" style="padding:8px 16px;background:#09090b;color:white;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">Registrar pago</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isActividades }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:24px 32px">
+          <div style="margin-bottom:32px">
+            <h3 style="font-size:17px;font-weight:600;color:#09090b;margin:0">Actividades y Regatas</h3>
+            <p style="font-size:14px;color:#71717a;margin:4px 0 0">Gestioná eventos, viajes y la asignación de botes</p>
+          </div>
+          <div style="display:flex;gap:8px;border-bottom:1px solid #e4e4e7;margin-bottom:24px">
+            <button style="padding:8px 16px;font-size:14px;font-weight:500;border-bottom:2px solid #09090b;color:#09090b;background:none;border-top:none;border-left:none;border-right:none;cursor:pointer">Próximas</button>
+            <button style="padding:8px 16px;font-size:14px;font-weight:500;border-bottom:2px solid transparent;color:#71717a;background:none;border-top:none;border-left:none;border-right:none;cursor:pointer">Pasadas</button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+            <sc-for list="{{ actividades }}" as="act" hint-placeholder-count="3">
+              <div onClick="{{ act.onClick }}" style="background:white;border:1px solid #e4e4e7;border-radius:12px;padding:20px;cursor:pointer">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+                  <span style="{{ act.tipoStyle }}">{{ act.tipo }}</span>
+                  <span style="font-size:12px;font-weight:500;color:#71717a;background:#f4f4f5;padding:4px 10px;border-radius:9999px">{{ act.estado }}</span>
+                </div>
+                <h4 style="font-weight:600;color:#09090b;font-size:15px;margin:0 0 16px">{{ act.titulo }}</h4>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;align-items:center;gap:12px;font-size:14px;color:#71717a">{{ calendarIconGray }}<span>{{ act.fecha }}</span></div>
+                  <div style="display:flex;align-items:center;gap:12px;font-size:14px;color:#71717a">{{ mapPinIconGray }}<span>{{ act.lugar }}</span></div>
+                </div>
+                <div style="margin-top:20px;padding-top:16px;border-top:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:center">
+                  <div style="display:flex">
+                    <div style="width:24px;height:24px;border-radius:9999px;background:#e4e4e7;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:10px;color:#71717a">?</div>
+                    <div style="width:24px;height:24px;border-radius:9999px;background:#e4e4e7;border:2px solid white;margin-left:-8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#71717a">?</div>
+                    <div style="width:24px;height:24px;border-radius:9999px;background:#e4e4e7;border:2px solid white;margin-left:-8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#71717a">?</div>
+                  </div>
+                  <span style="font-size:12px;font-weight:500;color:#71717a">{{ act.inscritos }} confirmados</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ hasSelectedActividad }}" hint-placeholder-val="{{ false }}">
+            <div style="position:fixed;inset:0;z-index:50;display:flex;justify-content:flex-end">
+              <div onClick="{{ closeActividadDrawer }}" style="position:absolute;inset:0;background:rgba(0,0,0,0.2);backdrop-filter:blur(1px)"></div>
+              <div style="position:relative;width:100%;max-width:420px;background:white;height:100%;box-shadow:-4px 0 24px rgba(0,0,0,0.1);display:flex;flex-direction:column;border-left:1px solid #e4e4e7">
+                <div style="padding:24px;border-bottom:1px solid #e4e4e7;background:#ffffff;display:flex;justify-content:space-between;align-items:flex-start">
+                  <div>
+                    <span style="display:inline-block;padding:4px 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;border-radius:6px;background:white;border:1px solid #e4e4e7;color:#52525b;margin-bottom:8px">{{ selectedActividad.tipo }}</span>
+                    <h3 style="font-weight:600;font-size:19px;color:#09090b;margin:0">{{ selectedActividad.titulo }}</h3>
+                    <p style="font-size:14px;color:#71717a;margin:4px 0 0;display:flex;align-items:center;gap:6px">{{ mapPinIconGray }} {{ selectedActividad.lugar }}</p>
+                  </div>
+                  <button onClick="{{ closeActividadDrawer }}" style="border:none;background:none;color:#a1a1aa;cursor:pointer;display:flex;padding:4px">{{ xIcon }}</button>
+                </div>
+                <div style="display:flex;padding:0 24px;border-bottom:1px solid #e4e4e7;gap:24px">
+                  <button onClick="{{ setActividadTabInfo }}" style="{{ actividadTabInfoStyle }}">Info general</button>
+                  <button onClick="{{ setActividadTabLogistica }}" style="{{ actividadTabLogisticaStyle }}">Logística</button>
+                </div>
+                <div class="canoa-scroll" style="flex:1;overflow-y:auto;padding:24px">
+                  <sc-if value="{{ isActividadTabInfo }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;flex-direction:column;gap:24px">
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                        <div style="background:#ffffff;padding:16px;border-radius:12px;border:1px solid #e4e4e7">
+                          <p style="font-size:12px;color:#71717a;font-weight:500;margin:0 0 4px;display:flex;align-items:center;gap:6px">{{ calendarIconGray }} Fecha</p>
+                          <p style="font-weight:600;color:#09090b;margin:0">{{ selectedActividad.fecha }}</p>
+                        </div>
+                        <div style="background:#ffffff;padding:16px;border-radius:12px;border:1px solid #e4e4e7">
+                          <p style="font-size:12px;color:#71717a;font-weight:500;margin:0 0 4px;display:flex;align-items:center;gap:6px">{{ usersRoundIconGray }} Inscritos</p>
+                          <p style="font-weight:600;color:#09090b;margin:0">{{ selectedActividad.inscritos }} palistas</p>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 style="font-size:14px;font-weight:600;color:#09090b;margin:0 0 8px">Descripción</h4>
+                        <p style="font-size:14px;color:#52525b;line-height:1.6;margin:0">Competencia anual organizada por la federación. Es obligatorio llevar DNI, carnet federativo y apto médico impreso. La carga de botes en el tráiler se realiza el día anterior a las 18:00hs en el club.</p>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ isActividadTabLogistica }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;flex-direction:column;gap:12px">
+                      <sc-for list="{{ logistica }}" as="item" hint-placeholder-count="3">
+                        <div style="padding:16px;border:1px solid #e4e4e7;border-radius:12px;background:white;display:flex;flex-direction:column;gap:12px">
+                          <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #f4f4f5">
+                            <div style="display:flex;align-items:center;gap:8px">
+                              <div style="width:24px;height:24px;border-radius:9999px;background:#f4f4f5;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#52525b">{{ item.initials }}</div>
+                              <span style="font-weight:500;font-size:14px;color:#09090b">{{ item.socio }}</span>
+                            </div>
+                            <span style="font-size:12px;padding:4px 8px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:6px">Confirmado</span>
+                          </div>
+                          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                            <div><p style="font-size:12px;color:#a1a1aa;font-weight:500;margin:0 0 2px;display:flex;align-items:center;gap:4px">{{ carIconSm }} Viaje</p><p style="font-size:14px;color:#27272a;margin:0">{{ item.vehiculo }}</p></div>
+                            <div><p style="font-size:12px;color:#a1a1aa;font-weight:500;margin:0 0 2px;display:flex;align-items:center;gap:4px">{{ flagIconSm }} Bote asignado</p><p style="font-size:14px;color:#27272a;font-weight:500;margin:0">{{ item.bote }}</p></div>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isEmbarcaciones }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:24px 32px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;border-bottom:1px solid #e4e4e7;padding-bottom:16px">
+            <div>
+              <h3 style="font-size:17px;font-weight:600;color:#09090b;margin:0">Embarcaciones</h3>
+              <p style="font-size:14px;color:#71717a;margin:4px 0 0">Flota de botes del club</p>
+            </div>
+            <button onClick="{{ openCreateEmb }}" style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#09090b;color:white;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">{{ plusIcon }} Nueva embarcación</button>
+          </div>
+
+          <sc-if value="{{ hasEmbarcaciones }}" hint-placeholder-val="{{ true }}">
+            <div style="background:white;border:1px solid #e4e4e7;border-radius:8px;overflow:hidden">
+              <table style="width:100%;text-align:left;font-size:14px;border-collapse:collapse">
+                <thead style="background:#fafafa;border-bottom:1px solid #e4e4e7">
+                  <tr>
+                    <th style="padding:12px 24px;font-weight:500;color:#71717a">Nombre</th>
+                    <th style="padding:12px 24px;font-weight:500;color:#71717a">Tipo</th>
+                    <th style="padding:12px 24px;font-weight:500;color:#71717a">Estado</th>
+                    <th style="padding:12px 24px;font-weight:500;color:#71717a">Asignado a</th>
+                    <th style="padding:12px 24px"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ embarcaciones }}" as="emb" hint-placeholder-count="4">
+                    <tr style="border-top:1px solid #f4f4f5">
+                      <td style="padding:16px 24px;font-weight:500;color:#09090b">{{ emb.nombre }}</td>
+                      <td style="padding:16px 24px;color:#52525b">{{ emb.tipo }}</td>
+                      <td style="padding:16px 24px"><span style="{{ emb.estadoStyle }}">{{ emb.estado }}</span></td>
+                      <td style="padding:16px 24px;color:#52525b">{{ emb.asignadoLabel }}</td>
+                      <td style="padding:16px 24px;text-align:right">
+                        <button onClick="{{ emb.onEdit }}" style="border:none;background:none;color:#71717a;cursor:pointer;display:inline-flex;padding:6px">{{ editIcon }}</button>
+                        <button onClick="{{ emb.onDelete }}" style="border:none;background:none;color:#71717a;cursor:pointer;display:inline-flex;padding:6px">{{ trashIcon }}</button>
+                      </td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </sc-if>
+          <sc-if value="{{ noEmbarcaciones }}" hint-placeholder-val="{{ false }}">
+            <div style="background:white;border:1px solid #e4e4e7;border-radius:12px;padding:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px">
+              <div style="width:48px;height:48px;background:#ffffff;border-radius:9999px;display:flex;align-items:center;justify-content:center;border:1px solid #e4e4e7">{{ flagIconLg }}</div>
+              <div>
+                <h4 style="font-size:14px;font-weight:500;color:#09090b;margin:0">No hay embarcaciones registradas</h4>
+                <p style="font-size:14px;color:#71717a;margin:4px 0 0">Agregá los botes y canoas de tu flota.</p>
+              </div>
+              <button onClick="{{ openCreateEmb }}" style="margin-top:8px;padding:8px 16px;background:white;border:1px solid #e4e4e7;box-shadow:0 1px 2px rgba(0,0,0,0.04);border-radius:6px;font-size:14px;font-weight:500;color:#27272a;cursor:pointer">Agregar embarcación</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showEmbModal }}" hint-placeholder-val="{{ false }}">
+            <div style="position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px">
+              <div style="background:white;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.15);width:100%;max-width:440px;overflow:hidden">
+                <div style="padding:20px 24px;border-bottom:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:center">
+                  <h3 style="font-weight:600;font-size:16px;margin:0">{{ embModalTitle }}</h3>
+                  <button onClick="{{ closeEmbModal }}" style="border:none;background:none;color:#a1a1aa;cursor:pointer;display:flex">{{ xIcon }}</button>
+                </div>
+                <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Nombre</label>
+                    <input type="text" placeholder="Ej: K1 Nelo Azul" value="{{ embNombre }}" onChange="{{ onEmbNombreChange }}" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Tipo</label>
+                    <select value="{{ embTipo }}" onChange="{{ onEmbTipoChange }}" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;background:white">
+                      <option>K1 (Individual)</option><option>K2 (Doble)</option><option>C1 (Canoa)</option><option>Travesía</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Estado</label>
+                    <select value="{{ embEstado }}" onChange="{{ onEmbEstadoChange }}" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;background:white">
+                      <option>Disponible</option><option>En mantenimiento</option><option>Fuera de servicio</option>
+                    </select>
+                  </div>
+                </div>
+                <div style="padding:16px 24px;border-top:1px solid #e4e4e7;background:#fafafa;display:flex;justify-content:flex-end;gap:12px">
+                  <button onClick="{{ closeEmbModal }}" style="padding:8px 16px;border:1px solid #e4e4e7;background:white;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">Cancelar</button>
+                  <button onClick="{{ saveEmb }}" disabled="{{ embInvalid }}" style="{{ saveEmbButtonStyle }}">{{ embModalAction }}</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showDeleteEmbModal }}" hint-placeholder-val="{{ false }}">
+            <div style="position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px">
+              <div style="background:white;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.15);width:100%;max-width:400px;overflow:hidden">
+                <div style="padding:24px;display:flex;flex-direction:column;gap:12px">
+                  <div style="width:40px;height:40px;border-radius:9999px;background:#fef2f2;display:flex;align-items:center;justify-content:center;color:#dc2626">{{ alertIcon }}</div>
+                  <h3 style="font-weight:600;font-size:16px;margin:0">Eliminar embarcación</h3>
+                  <p style="font-size:14px;color:#71717a;margin:0">¿Seguro que querés eliminar "{{ deletingEmbNombre }}"? Esta acción no se puede deshacer.</p>
+                </div>
+                <div style="padding:16px 24px;border-top:1px solid #e4e4e7;background:#fafafa;display:flex;justify-content:flex-end;gap:12px">
+                  <button onClick="{{ closeDeleteEmbModal }}" style="padding:8px 16px;border:1px solid #e4e4e7;background:white;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">Cancelar</button>
+                  <button onClick="{{ confirmDeleteEmb }}" style="padding:8px 16px;background:#dc2626;color:white;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">Eliminar</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isColaboradores }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:24px 32px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;border-bottom:1px solid #e4e4e7;padding-bottom:16px">
+            <div>
+              <h3 style="font-size:17px;font-weight:600;color:#09090b;margin:0">Colaboradores</h3>
+              <p style="font-size:14px;color:#71717a;margin:4px 0 0">Gestioná el equipo con acceso al panel</p>
+            </div>
+            <button onClick="{{ openNewColabModal }}" style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#09090b;color:white;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">{{ plusIcon }} Alta de colaborador</button>
+          </div>
+          <sc-if value="{{ hasColaboradores }}" hint-placeholder-val="{{ false }}">
+            <div style="background:white;border:1px solid #e4e4e7;border-radius:8px;overflow:hidden">
+              <table style="width:100%;text-align:left;font-size:14px;border-collapse:collapse">
+                <thead style="background:#fafafa;border-bottom:1px solid #e4e4e7">
+                  <tr>
+                    <th style="padding:12px 24px;font-weight:500;color:#71717a">Nombre</th>
+                    <th style="padding:12px 24px;font-weight:500;color:#71717a">Email</th>
+                    <th style="padding:12px 24px;font-weight:500;color:#71717a">Rol</th>
+                    <th style="padding:12px 24px;font-weight:500;color:#71717a">Acceso</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ colaboradores }}" as="colab" hint-placeholder-count="2">
+                    <tr style="border-top:1px solid #f4f4f5">
+                      <td style="padding:16px 24px;font-weight:500;color:#09090b">{{ colab.nombreCompleto }}</td>
+                      <td style="padding:16px 24px;color:#52525b">{{ colab.email }}</td>
+                      <td style="padding:16px 24px;color:#52525b">{{ colab.rolConNivel }}</td>
+                      <td style="padding:16px 24px;color:#52525b;font-size:13px">{{ colab.permisos }}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </sc-if>
+          <sc-if value="{{ noColaboradores }}" hint-placeholder-val="{{ true }}">
+            <div style="background:white;border:1px solid #e4e4e7;border-radius:12px;padding:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px">
+              <div style="width:48px;height:48px;background:#ffffff;border-radius:9999px;display:flex;align-items:center;justify-content:center;border:1px solid #e4e4e7">{{ briefcaseIcon }}</div>
+              <div>
+                <h4 style="font-size:14px;font-weight:500;color:#09090b;margin:0">No hay colaboradores todavía</h4>
+                <p style="font-size:14px;color:#71717a;margin:4px 0 0">Invitá a profesores y administrativos para empezar.</p>
+              </div>
+              <button onClick="{{ openNewColabModal }}" style="margin-top:8px;padding:8px 16px;background:white;border:1px solid #e4e4e7;box-shadow:0 1px 2px rgba(0,0,0,0.04);border-radius:6px;font-size:14px;font-weight:500;color:#27272a;cursor:pointer">Agregar colaborador</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showNewColabModal }}" hint-placeholder-val="{{ false }}">
+            <div style="position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px">
+              <div style="background:white;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.15);width:100%;max-width:480px;overflow:hidden">
+                <div style="padding:24px;border-bottom:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:center">
+                  <div><h3 style="font-weight:600;font-size:17px;margin:0">Agregar colaborador</h3><p style="font-size:14px;color:#71717a;margin:4px 0 0">Recibirá un email para crear su cuenta.</p></div>
+                  <button onClick="{{ closeNewColabModal }}" style="border:none;background:none;color:#a1a1aa;cursor:pointer;display:flex">{{ xIcon }}</button>
+                </div>
+                <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+                  <div><label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Email</label><input type="email" placeholder="juanpablo@club.com" value="{{ newColabEmail }}" onChange="{{ onNewColabEmailChange }}" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box"></div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                    <div><label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Nombre</label><input type="text" value="{{ newColabNombre }}" onChange="{{ onNewColabNombreChange }}" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box"></div>
+                    <div><label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Apellido</label><input type="text" value="{{ newColabApellido }}" onChange="{{ onNewColabApellidoChange }}" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box"></div>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Rol de sistema</label>
+                    <select value="{{ newColabRol }}" onChange="{{ onNewColabRolChange }}" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;background:white"><option>Seleccionar rol...</option><option>Administrador</option><option>Profesor</option><option>Secretaría</option></select>
+                    <p style="font-size:12px;color:#71717a;margin:6px 0 0">{{ newColabRolDescription }}</p>
+                  </div>
+                  <sc-if value="{{ isRolProfesor }}" hint-placeholder-val="{{ false }}">
+                    <div>
+                      <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Nivel a cargo</label>
+                      <select value="{{ newColabNivel }}" onChange="{{ onNewColabNivelChange }}" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;background:white">
+                        <option>Seleccionar nivel...</option>
+                        <sc-for list="{{ nivelOptions }}" as="niv" hint-placeholder-count="2"><option>{{ niv }}</option></sc-for>
+                      </select>
+                      <p style="font-size:12px;color:#71717a;margin:6px 0 0">Solo verá los socios de este nivel.</p>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="padding:16px 24px;border-top:1px solid #e4e4e7;background:#ffffff;display:flex;justify-content:flex-end;gap:12px">
+                  <button onClick="{{ closeNewColabModal }}" style="padding:8px 16px;border:1px solid #e4e4e7;background:white;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">Cancelar</button>
+                  <button onClick="{{ saveNewColab }}" disabled="{{ newColabInvalid }}" style="{{ saveColabButtonStyle }}">Alta de colaborador</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isConfiguracion }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:24px 32px;display:flex;flex-direction:column;gap:24px">
+          
+
+          <div style="background:white;border:1px solid #e4e4e7;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,0.04);padding:24px;display:flex;flex-direction:column;gap:16px">
+            <div><h3 style="font-size:15px;font-weight:600;color:#09090b;margin:0">Información del club</h3><p style="font-size:14px;color:#71717a;margin:4px 0 0">Datos básicos de tu organización</p></div>
+            <div><label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Nombre del club</label><input type="text" defaultValue="Canotaje Córdoba" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box"></div>
+            <div><label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Email de contacto</label><input type="email" defaultValue="luis@kiri.ar" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box"></div>
+            <div><label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Teléfono</label><input type="text" defaultValue="2235181392" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box"></div>
+          </div>
+
+          <div style="background:white;border:1px solid #e4e4e7;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,0.04);padding:24px;display:flex;flex-direction:column;gap:20px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div><h3 style="font-size:15px;font-weight:600;color:#09090b;margin:0">Tipos de cuota</h3><p style="font-size:14px;color:#71717a;margin:4px 0 0">Definí los valores mensuales para distintas categorías de socios.</p></div>
+              <button onClick="{{ openCreateTipo }}" style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:#09090b;border:1px solid #e4e4e7;padding:6px 12px;border-radius:6px;background:white;cursor:pointer">{{ plusIconSm }} Nuevo tipo</button>
+            </div>
+            <div style="border:1px solid #e4e4e7;border-radius:8px">
+              <sc-for list="{{ tiposCuota }}" as="tipo" hint-placeholder-count="4">
+                <div style="{{ tipo.rowStyle }}">
+                  <div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="font-weight:500;font-size:14px;color:#09090b">{{ tipo.nombre }}</span>
+                      {{ tipo.defaultBadge }}
+                    </div>
+                    <span style="font-size:14px;color:#71717a">${{ tipo.monto }} / mes</span>
+                  </div>
+                  <div style="display:flex;gap:4px">
+                    <button onClick="{{ tipo.onEdit }}" style="border:none;background:none;color:#71717a;cursor:pointer;display:flex;padding:6px">{{ editIcon }}</button>
+                    <button onClick="{{ tipo.onDelete }}" style="border:none;background:none;color:#71717a;cursor:pointer;display:flex;padding:6px">{{ trashIcon }}</button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ showTipoModal }}" hint-placeholder-val="{{ false }}">
+              <div style="position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px">
+                <div style="background:white;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.15);width:100%;max-width:420px;overflow:hidden">
+                  <div style="padding:20px 24px;border-bottom:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:center">
+                    <h3 style="font-weight:600;font-size:16px;margin:0">{{ tipoModalTitle }}</h3>
+                    <button onClick="{{ closeTipoModal }}" style="border:none;background:none;color:#a1a1aa;cursor:pointer;display:flex">{{ xIcon }}</button>
+                  </div>
+                  <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+                    <div>
+                      <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Nombre</label>
+                      <input type="text" defaultValue="{{ tipoModalDefaults.nombre }}" placeholder="Ej: Estándar" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Monto mensual</label>
+                      <input type="number" defaultValue="{{ tipoModalDefaults.monto }}" placeholder="15000" style="width:100%;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+                    </div>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:#27272a">
+                      <input type="checkbox" defaultChecked="{{ tipoModalDefaults.porDefecto }}"> Marcar como cuota por defecto
+                    </label>
+                  </div>
+                  <div style="padding:16px 24px;border-top:1px solid #e4e4e7;background:#fafafa;display:flex;justify-content:flex-end;gap:12px">
+                    <button onClick="{{ closeTipoModal }}" style="padding:8px 16px;border:1px solid #e4e4e7;background:white;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">Cancelar</button>
+                    <button onClick="{{ closeTipoModal }}" style="padding:8px 16px;background:#09090b;color:white;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">{{ tipoModalAction }}</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ showDeleteTipoModal }}" hint-placeholder-val="{{ false }}">
+              <div style="position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px">
+                <div style="background:white;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.15);width:100%;max-width:400px;overflow:hidden">
+                  <div style="padding:24px;display:flex;flex-direction:column;gap:12px">
+                    <div style="width:40px;height:40px;border-radius:9999px;background:#fef2f2;display:flex;align-items:center;justify-content:center;color:#dc2626">{{ alertIcon }}</div>
+                    <h3 style="font-weight:600;font-size:16px;margin:0">Eliminar tipo de cuota</h3>
+                    <p style="font-size:14px;color:#71717a;margin:0">¿Seguro que querés eliminar "{{ deletingTipoNombre }}"? Esta acción no se puede deshacer.</p>
+                  </div>
+                  <div style="padding:16px 24px;border-top:1px solid #e4e4e7;background:#fafafa;display:flex;justify-content:flex-end;gap:12px">
+                    <button onClick="{{ closeDeleteTipoModal }}" style="padding:8px 16px;border:1px solid #e4e4e7;background:white;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">Cancelar</button>
+                    <button onClick="{{ closeDeleteTipoModal }}" style="padding:8px 16px;background:#dc2626;color:white;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer">Eliminar</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <div style="padding-top:16px;border-top:1px solid #e4e4e7">
+              <label style="display:block;font-size:14px;font-weight:500;margin-bottom:4px">Día de vencimiento general</label>
+              <input type="number" defaultValue="10" style="width:150px;padding:8px 12px;border:1px solid #e4e4e7;border-radius:6px;font-size:14px;box-sizing:border-box">
+              <p style="font-size:12px;color:#71717a;margin:6px 0 0">Día del mes (1-31) en que vence el pago de todas las cuotas.</p>
+            </div>
+          </div>
+
+          <div style="background:white;border:1px solid #e4e4e7;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,0.04);padding:24px;display:flex;flex-direction:column;gap:20px">
+            <div><h3 style="font-size:15px;font-weight:600;color:#09090b;margin:0">Notificaciones</h3><p style="font-size:14px;color:#71717a;margin:4px 0 0">Configura las comunicaciones automáticas con tus socios</p></div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div><p style="font-size:14px;font-weight:500;color:#09090b;margin:0">Enviar emails a socios</p><p style="font-size:12px;color:#71717a;max-width:420px;margin:4px 0 0">Si lo desactivás no se enviarán comprobantes, recordatorios ni invitaciones.</p></div>
+              <button onClick="{{ toggleEmailNotif }}" style="{{ emailToggleTrackStyle }}"><div style="{{ emailToggleThumbStyle }}"></div></button>
+            </div>
+            <div style="padding-top:16px;border-top:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:center;opacity:0.6">
+              <div><p style="font-size:14px;font-weight:500;color:#09090b;margin:0">Recordatorios por WhatsApp</p><p style="font-size:12px;color:#71717a;margin:4px 0 0">Notificaciones automáticas vía WhatsApp</p></div>
+              <span style="padding:4px 10px;background:#f4f4f5;color:#52525b;border:1px solid #e4e4e7;font-size:12px;border-radius:6px;font-weight:500">Próximamente</span>
+            </div>
+          </div>
+
+          <div style="background:white;border:1px solid #e4e4e7;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,0.04);padding:24px;display:flex;flex-direction:column;gap:16px">
+            <div><h3 style="font-size:15px;font-weight:600;color:#09090b;margin:0">Base de datos</h3><p style="font-size:14px;color:#71717a;margin:4px 0 0">Migrá tu lista de socios desde Excel u otra plataforma.</p></div>
+            <div style="width:100%;border:2px dashed #e4e4e7;border-radius:10px;padding:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;box-sizing:border-box">
+              {{ uploadIconLg }}
+              <p style="font-size:14px;font-weight:500;color:#09090b;margin:0">Arrastrá tu archivo Excel o CSV aquí</p>
+              <p style="font-size:12px;color:#71717a;margin:0">o hacé clic para seleccionar un archivo</p>
+            </div>
+            <button style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 16px;border:1px solid #e4e4e7;background:white;color:#27272a;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;box-sizing:border-box">{{ downloadIcon }} Descargar plantilla</button>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </main>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const P = {tag:'path'}, L = {tag:'line'}, C = {tag:'circle'}, R = {tag:'rect'}, PL = {tag:'polyline'};
+const ICONS = {
+  home: [{tag:'path',attrs:{d:'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'}},{tag:'polyline',attrs:{points:'9 22 9 12 15 12 15 22'}}],
+  users: [{tag:'path',attrs:{d:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'}},{tag:'circle',attrs:{cx:9,cy:7,r:4}},{tag:'path',attrs:{d:'M22 21v-2a4 4 0 0 0-3-3.87'}},{tag:'path',attrs:{d:'M16 3.13a4 4 0 0 1 0 7.75'}}],
+  creditcard: [{tag:'rect',attrs:{x:1,y:4,width:22,height:16,rx:2,ry:2}},{tag:'line',attrs:{x1:1,y1:10,x2:23,y2:10}}],
+  activity: [{tag:'polyline',attrs:{points:'22 12 18 12 15 21 9 3 6 12 2 12'}}],
+  briefcase: [{tag:'rect',attrs:{x:2,y:7,width:20,height:14,rx:2,ry:2}},{tag:'path',attrs:{d:'M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'}}],
+  settings: [{tag:'circle',attrs:{cx:12,cy:12,r:3}},{tag:'path',attrs:{d:'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'}}],
+  logout: [{tag:'path',attrs:{d:'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'}},{tag:'polyline',attrs:{points:'16 17 21 12 16 7'}},{tag:'line',attrs:{x1:21,y1:12,x2:9,y2:12}}],
+  moon: [{tag:'path',attrs:{d:'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'}}],
+  search: [{tag:'circle',attrs:{cx:11,cy:11,r:8}},{tag:'line',attrs:{x1:21,y1:21,x2:16.65,y2:16.65}}],
+  download: [{tag:'path',attrs:{d:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'}},{tag:'polyline',attrs:{points:'7 10 12 15 17 10'}},{tag:'line',attrs:{x1:12,y1:15,x2:12,y2:3}}],
+  plus: [{tag:'line',attrs:{x1:12,y1:5,x2:12,y2:19}},{tag:'line',attrs:{x1:5,y1:12,x2:19,y2:12}}],
+  upload: [{tag:'path',attrs:{d:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'}},{tag:'polyline',attrs:{points:'17 8 12 3 7 8'}},{tag:'line',attrs:{x1:12,y1:3,x2:12,y2:15}}],
+  calendar: [{tag:'rect',attrs:{x:3,y:4,width:18,height:18,rx:2,ry:2}},{tag:'line',attrs:{x1:16,y1:2,x2:16,y2:6}},{tag:'line',attrs:{x1:8,y1:2,x2:8,y2:6}},{tag:'line',attrs:{x1:3,y1:10,x2:21,y2:10}}],
+  more: [{tag:'circle',attrs:{cx:12,cy:12,r:1}},{tag:'circle',attrs:{cx:19,cy:12,r:1}},{tag:'circle',attrs:{cx:5,cy:12,r:1}}],
+  x: [{tag:'line',attrs:{x1:18,y1:6,x2:6,y2:18}},{tag:'line',attrs:{x1:6,y1:6,x2:18,y2:18}}],
+  alert: [{tag:'circle',attrs:{cx:12,cy:12,r:10}},{tag:'line',attrs:{x1:12,y1:8,x2:12,y2:12}},{tag:'line',attrs:{x1:12,y1:16,x2:12.01,y2:16}}],
+  check: [{tag:'path',attrs:{d:'M22 11.08V12a10 10 0 1 1-5.93-9.14'}},{tag:'polyline',attrs:{points:'22 4 12 14.01 9 11.01'}}],
+  trash: [{tag:'polyline',attrs:{points:'3 6 5 6 21 6'}},{tag:'path',attrs:{d:'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'}},{tag:'line',attrs:{x1:10,y1:11,x2:10,y2:17}},{tag:'line',attrs:{x1:14,y1:11,x2:14,y2:17}}],
+  file: [{tag:'path',attrs:{d:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'}},{tag:'polyline',attrs:{points:'14 2 14 8 20 8'}},{tag:'line',attrs:{x1:16,y1:13,x2:8,y2:13}},{tag:'line',attrs:{x1:16,y1:17,x2:8,y2:17}}],
+  mail: [{tag:'path',attrs:{d:'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z'}},{tag:'polyline',attrs:{points:'22 6 12 13 2 6'}}],
+  phone: [{tag:'path',attrs:{d:'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'}}],
+  share: [{tag:'circle',attrs:{cx:18,cy:5,r:3}},{tag:'circle',attrs:{cx:6,cy:12,r:3}},{tag:'circle',attrs:{cx:18,cy:19,r:3}},{tag:'line',attrs:{x1:8.59,y1:13.51,x2:15.42,y2:17.49}},{tag:'line',attrs:{x1:15.41,y1:6.51,x2:8.59,y2:10.49}}],
+  mappin: [{tag:'path',attrs:{d:'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z'}},{tag:'circle',attrs:{cx:12,cy:10,r:3}}],
+  flag: [{tag:'path',attrs:{d:'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z'}},{tag:'line',attrs:{x1:4,y1:22,x2:4,y2:15}}],
+  car: [{tag:'path',attrs:{d:'M5 17h14M5 17a2 2 0 1 1-4 0 2 2 0 1 1 4 0zM19 17a2 2 0 1 1 4 0 2 2 0 1 1-4 0zM3 17v-6l2-5h14l2 5v6'}}],
+  usersround: [{tag:'path',attrs:{d:'M18 21a6 6 0 0 0-12 0'}},{tag:'circle',attrs:{cx:12,cy:11,r:4}},{tag:'path',attrs:{d:'M22 20a4 4 0 0 0-3-3.87'}},{tag:'path',attrs:{d:'M16 3.13a4 4 0 0 1 0 7.75'}}],
+  edit: [{tag:'path',attrs:{d:'M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z'}}],
+  user: [{tag:'path',attrs:{d:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'}},{tag:'circle',attrs:{cx:12,cy:7,r:4}}],
+  panelleft: [{tag:'rect',attrs:{x:3,y:3,width:18,height:18,rx:2}},{tag:'line',attrs:{x1:9,y1:3,x2:9,y2:21}}],
+  columns: [{tag:'rect',attrs:{x:3,y:3,width:18,height:18,rx:2}},{tag:'line',attrs:{x1:9,y1:3,x2:9,y2:21}},{tag:'line',attrs:{x1:15,y1:3,x2:15,y2:21}}],
+  arrowleft: [{tag:'line',attrs:{x1:19,y1:12,x2:5,y2:12}},{tag:'polyline',attrs:{points:'12 19 5 12 12 5'}}],
+  arrowright: [{tag:'line',attrs:{x1:5,y1:12,x2:19,y2:12}},{tag:'polyline',attrs:{points:'12 5 19 12 12 19'}}],
+};
+function icon(name, size, color, key) {
+  const parts = ICONS[name] || [];
+  return React.createElement('svg', {key: key, width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: color || 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', style: {flexShrink: 0}},
+    parts.map((p, i) => React.createElement(p.tag, {key: i, ...p.attrs})));
+}
+
+const TAB_LABELS = {
+  inicio: ['Hola, Camargo', 'Resumen de tu gestión de socios'],
+  socios: ['Socios', 'Gestiona los socios del club'],
+  pagos: ['Pagos', 'Gestión de cuotas y pagos mensuales'],
+  actividades: ['Actividades', 'Regatas, viajes y logística'],
+  embarcaciones: ['Embarcaciones', 'Flota de botes y palas del club'],
+  colaboradores: ['Colaboradores', 'Gestioná el equipo con acceso al panel'],
+  configuracion: ['Configuración', 'Ajustes del sistema'],
+};
+
+const MOCK_ORGS = [
+  { id: 'cc', nombre: 'Canotaje Córdoba', iniciales: 'CC' },
+  { id: 'np', nombre: 'Club Náutico Paraná', iniciales: 'NP' },
+  { id: 'ks', nombre: 'Kayak Sur', iniciales: 'KS' },
+];
+
+const MOCK_SOCIOS = [
+  { id: 1, nombre: 'Camargo Ezequiel', email: 'luis@kiri.ar', dni: '36616757', telefono: '2235181392', estado: 'Activo', deuda: 'Admin', grupoFamiliar: null, tipoCuotaId: '1', nivel: 'Avanzado',
+    fechaInscripcion: '03/02/2020', fechaNacimiento: '14/05/1990', contactoEmergencia: 'Marta Camargo - 2235112233', categoria: 'Mayores', condicionMedica: 'Ninguna',
+    comprobante: 'inscripcion_camargo.pdf', certificadoMedico: 'certificado_camargo.pdf', deslinde: 'deslinde_camargo.pdf' },
+  { id: 2, nombre: 'Ana Gomez', email: 'ana@ejemplo.com', dni: '40123456', telefono: '11-2233-4455', estado: 'Activo', deuda: 'Al día', grupoFamiliar: 'Familia Gomez', tipoCuotaId: '2', nivel: 'Intermedio',
+    fechaInscripcion: '18/03/2022', fechaNacimiento: '02/11/1998', contactoEmergencia: 'Roberto Gomez - 11-4455-6677', categoria: 'Juveniles', condicionMedica: 'Asma leve',
+    comprobante: 'inscripcion_gomez.pdf', certificadoMedico: null, deslinde: 'deslinde_gomez.pdf' },
+  { id: 3, nombre: 'Juan Perez', email: 'juan@ejemplo.com', dni: '38987654', telefono: '11-9876-5432', estado: 'Pendiente', deuda: 'Debe cuota', grupoFamiliar: null, tipoCuotaId: '1', nivel: 'Avanzado',
+    fechaInscripcion: '09/06/2023', fechaNacimiento: '27/01/1995', contactoEmergencia: 'Lucía Pérez - 11-2233-1122', categoria: 'Mayores', condicionMedica: 'Ninguna',
+    comprobante: null, certificadoMedico: null, deslinde: null },
+];
+const MOCK_TIPOS_CUOTA = [
+  { id: '1', nombre: 'Estándar', monto: 15000, porDefecto: true },
+  { id: '2', nombre: 'Familiar', monto: 25000, porDefecto: false },
+  { id: '3', nombre: 'Menor', monto: 10000, porDefecto: false },
+  { id: '4', nombre: 'Becado', monto: 0, porDefecto: false },
+];
+const MOCK_PAGOS = [
+  { id: 1, socioId: 1, socio: 'Camargo Ezequiel', periodo: 'Agosto de 2026', fecha: '27/08/2026', metodo: 'Tarjeta', monto: '$ 15.000' },
+  { id: 2, socioId: 2, socio: 'Ana Gomez', periodo: 'Agosto de 2026', fecha: '15/08/2026', metodo: 'Transferencia', monto: '$ 25.000' },
+  { id: 3, socioId: 1, socio: 'Camargo Ezequiel', periodo: 'Julio de 2026', fecha: '10/07/2026', metodo: 'Efectivo', monto: '$ 15.000' },
+];
+const MOCK_ACTIVIDADES = [
+  { id: 1, titulo: 'Regata Provincial Córdoba', fecha: '15/09/2026', tipo: 'Regata', lugar: 'Villa Carlos Paz', estado: 'Próxima', inscritos: 12 },
+  { id: 2, titulo: 'Travesía de Luna Llena', fecha: '28/08/2026', tipo: 'Travesía', lugar: 'Lago Los Molinos', estado: 'Confirmada', inscritos: 8 },
+  { id: 3, titulo: 'Campeonato Nacional', fecha: '10/10/2026', tipo: 'Regata', lugar: 'Tigre, Buenos Aires', estado: 'Planificación', inscritos: 5 },
+];
+const MOCK_EMBARCACIONES = [
+  { id: 1, nombre: 'K1 Nelo Azul', tipo: 'K1 (Individual)', estado: 'Disponible', asignadoA: null },
+  { id: 2, nombre: 'K1 Escuela (Naranja)', tipo: 'K1 (Individual)', estado: 'Disponible', asignadoA: 'Juan Perez' },
+  { id: 3, nombre: 'Travesía Doble', tipo: 'K2 (Doble)', estado: 'En mantenimiento', asignadoA: null },
+  { id: 4, nombre: 'C1 Competición', tipo: 'C1 (Canoa)', estado: 'Fuera de servicio', asignadoA: null },
+];
+
+const MOCK_LOGISTICA = [
+  { id: 1, socio: 'Camargo Ezequiel', vehiculo: 'Furgoneta Club', bote: 'K1 Nelo Azul' },
+  { id: 2, socio: 'Ana Gomez', vehiculo: 'Auto Particular (Gomez)', bote: 'Travesía Doble (Proa)' },
+  { id: 3, socio: 'Juan Perez', vehiculo: 'Furgoneta Club', bote: 'K1 Escuela (Naranja)' },
+];
+
+const ROLE_DESCRIPTIONS = {
+  'Administrador': 'Acceso total: modifica socios, pagos, actividades, colaboradores y configuración.',
+  'Secretaría': 'Acceso a todo el panel excepto Configuración.',
+  'Profesor': 'Solo Socios: ve y da de alta alumnos de su nivel, toma asistencia y comparte el formulario. No accede a Pagos ni Configuración.',
+};
+const ROLE_PERMISSIONS = {
+  'Administrador': 'Todo el sistema',
+  'Secretaría': 'Todo salvo Configuración',
+  'Profesor': 'Solo Socios (su nivel)',
+};
+
+function initials(name) {
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+}
+
+class Component extends DCLogic {
+  state = {
+    activeTab: 'socios',
+    showNewSocioModal: false,
+    selectedSocioId: null,
+    socioTab: 'perfil',
+    searchTerm: '',
+    isLinkCopied: false,
+    isTakingAttendance: false,
+    attendanceDate: '2026-08-27',
+    attendanceRecords: {},
+    searchTermPagos: '',
+    pagoTab: 'estado',
+    showNewPagoModal: false,
+    selectedActividadId: null,
+    actividadTab: 'info',
+    showNewColabModal: false,
+    colaboradores: [],
+    newColabEmail: '', newColabNombre: '', newColabApellido: '', newColabRol: 'Seleccionar rol...', newColabNivel: 'Seleccionar nivel...',
+    emailNotif: true,
+    userMenuOpen: false,
+    showTipoModal: false,
+    tipoModalMode: 'create',
+    editingTipoId: null,
+    deletingTipoId: null,
+    asistenciaPage: 1,
+    embarcaciones: MOCK_EMBARCACIONES,
+    pagos: MOCK_PAGOS,
+    isBulkPayment: false, bulkPaymentPeriod: 'Agosto de 2026', bulkPaymentSelected: {},
+    showEmbModal: false, embModalMode: 'create', editingEmbId: null, deletingEmbId: null,
+    embNombre: '', embTipo: 'K1 (Individual)', embEstado: 'Disponible',
+    sidebarCollapsed: false,
+    orgMenuOpen: false,
+    activeOrgId: 'cc',
+    shareMenuOpen: false,
+    publicFormEnabled: true,
+    sociosPage: 1,
+    columnsMenuOpen: false,
+    searchBoxOpen: false,
+    attendanceNivelFilter: 'Todos',
+    attendanceEstadoFilter: 'Activo',
+    visibleColumns: { email: true, telefono: true, dni: true, tipoCuota: true, estado: true, mesActual: true },
+  };
+
+  navButton(id, label, active, onClick) {
+    return {
+      id, label, onClick,
+      icon: icon(id === 'inicio' ? 'home' : id === 'socios' ? 'users' : id === 'pagos' ? 'creditcard' : id === 'actividades' ? 'activity' : id === 'embarcaciones' ? 'flag' : id === 'colaboradores' ? 'briefcase' : 'settings', 18, active ? '#09090b' : '#a1a1aa'),
+      style: {
+        width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px',
+        borderRadius: '6px', fontSize: '14px', fontWeight: 500, border: 'none', cursor: 'pointer', textAlign: 'left',
+        background: active ? '#f4f4f5' : 'none', color: active ? '#09090b' : '#52525b',
+      },
+    };
+  }
+
+  estadoStyle(deuda) {
+    const map = {
+      'Admin': { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+      'Al día': { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+      'Debe cuota': { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca' },
+    };
+    const c = map[deuda] || map['Debe cuota'];
+    return `padding:4px 10px;font-size:12px;border-radius:9999px;font-weight:500;background:${c.bg};color:${c.color};border:1px solid ${c.border}`;
+  }
+
+  activoStyle(estado) {
+    return estado === 'Activo'
+      ? 'padding:4px 10px;font-size:12px;border-radius:9999px;font-weight:500;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0'
+      : 'padding:4px 10px;font-size:12px;border-radius:9999px;font-weight:500;background:#fefce8;color:#a16207;border:1px solid #fef08a';
+  }
+
+  renderVals() {
+    const s = this.state;
+    const tab = s.activeTab;
+    const [title, subtitle] = TAB_LABELS[tab] || ['Canotaje Córdoba', 'Panel de administración'];
+
+    const menuItems = ['socios', 'pagos', 'actividades', 'embarcaciones', 'colaboradores', 'configuracion'].map(id => {
+      const labels = { inicio: 'Inicio', socios: 'Socios', pagos: 'Pagos', actividades: 'Actividades', embarcaciones: 'Embarcaciones', colaboradores: 'Colaboradores', configuracion: 'Configuración' };
+      return this.navButton(id, labels[id], tab === id, () => this.setState({ activeTab: id }));
+    });
+
+    const filteredSocios = MOCK_SOCIOS.filter(so =>
+      so.nombre.toLowerCase().includes(s.searchTerm.toLowerCase()) ||
+      so.dni.includes(s.searchTerm) || so.email.toLowerCase().includes(s.searchTerm.toLowerCase())
+    ).filter(so =>
+      !s.isTakingAttendance ||
+      ((s.attendanceNivelFilter === 'Todos' || so.nivel === s.attendanceNivelFilter) &&
+       (s.attendanceEstadoFilter === 'Todos' || so.estado === s.attendanceEstadoFilter))
+    ).map(socio => {
+      const tipoCuota = MOCK_TIPOS_CUOTA.find(c => c.id === socio.tipoCuotaId);
+      const isPresent = !!(s.attendanceRecords[s.attendanceDate] && s.attendanceRecords[s.attendanceDate][socio.id]);
+      const isPaidThisBulk = !!s.bulkPaymentSelected[socio.id];
+      return {
+        ...socio,
+        initials: initials(socio.nombre),
+        tipoCuotaNombre: tipoCuota ? tipoCuota.nombre : 'Estándar',
+        estadoStyle: this.activoStyle(socio.estado),
+        deudaStyle: this.estadoStyle(socio.deuda),
+        grupoFamiliarBadge: socio.grupoFamiliar
+          ? React.createElement('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 8px', background: '#f4f4f5', color: '#27272a', fontSize: '12px', borderRadius: '6px', fontWeight: 500, border: '1px solid #e4e4e7' } }, icon('usersround', 12, '#71717a'), socio.grupoFamiliar)
+          : React.createElement('span', { style: { color: '#a1a1aa' } }, '-'),
+        rowStyle: {
+          cursor: (s.isTakingAttendance || s.isBulkPayment) ? 'default' : 'pointer',
+          background: s.isTakingAttendance ? (isPresent ? 'rgba(240,253,244,0.4)' : 'white') : s.isBulkPayment ? (isPaidThisBulk ? 'rgba(240,253,244,0.4)' : 'white') : 'white',
+        },
+        onClick: () => { if (!s.isTakingAttendance && !s.isBulkPayment) this.setState({ selectedSocioId: socio.id, socioTab: 'perfil' }); },
+        montoCuota: tipoCuota ? `$ ${tipoCuota.monto}` : '$ 0',
+        bulkChecked: isPaidThisBulk,
+        toggleBulkPayment: () => this.setState(prev => ({
+          bulkPaymentSelected: { ...prev.bulkPaymentSelected, [socio.id]: !isPaidThisBulk },
+        })),
+        toggleAttendance: () => this.setState(prev => ({
+          attendanceRecords: { ...prev.attendanceRecords, [prev.attendanceDate]: { ...(prev.attendanceRecords[prev.attendanceDate] || {}), [socio.id]: !isPresent } },
+        })),
+        attendanceIcon: icon('check', 16, isPresent ? '#16a34a' : '#a1a1aa'),
+        attendanceLabel: isPresent ? 'Presente' : 'Marcar asistencia',
+        attendanceButtonStyle: `display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;border:1px solid ${isPresent ? '#bbf7d0' : '#e4e4e7'};background:${isPresent ? '#f0fdf4' : '#f4f4f5'};color:${isPresent ? '#15803d' : '#71717a'}`,
+      };
+    });
+
+    const selectedSocioRaw = MOCK_SOCIOS.find(so => so.id === s.selectedSocioId);
+    let selectedSocio = null, selectedSocioPagos = [];
+    if (selectedSocioRaw) {
+      const tipoCuota = MOCK_TIPOS_CUOTA.find(c => c.id === selectedSocioRaw.tipoCuotaId);
+      const docBlock = (val) => val
+        ? React.createElement('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#09090b', background: '#f4f4f5', border: '1px solid #e4e4e7', borderRadius: '6px', padding: '6px 10px' } }, icon('file', 14, '#71717a'), val)
+        : React.createElement('span', { style: { fontSize: '13px', color: '#a1a1aa' } }, 'No adjuntado');
+      selectedSocio = {
+        ...selectedSocioRaw, initials: initials(selectedSocioRaw.nombre),
+        tipoCuotaNombre: tipoCuota ? tipoCuota.nombre : 'Estándar', deudaStyle: this.estadoStyle(selectedSocioRaw.deuda),
+        telefono: selectedSocioRaw.telefono || 'No registrado',
+        comprobanteBlock: docBlock(selectedSocioRaw.comprobante),
+        certificadoBlock: docBlock(selectedSocioRaw.certificadoMedico),
+        deslindeBlock: docBlock(selectedSocioRaw.deslinde),
+        grupoFamiliarBlock: selectedSocioRaw.grupoFamiliar
+          ? React.createElement('div', { style: { padding: '16px', border: '1px dashed #e4e4e7', borderRadius: '12px' } },
+              React.createElement('h4', { style: { fontSize: '14px', fontWeight: 600, color: '#09090b', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '8px' } }, icon('usersround', 16, '#a1a1aa'), 'Grupo familiar'),
+              React.createElement('p', { style: { fontSize: '14px', color: '#71717a', margin: 0 } }, 'Asociado a: ', React.createElement('span', { style: { fontWeight: 500, color: '#09090b' } }, selectedSocioRaw.grupoFamiliar)))
+          : null,
+      };
+      selectedSocioPagos = s.pagos.filter(p => p.socioId === selectedSocioRaw.id);
+    }
+
+    const ASISTENCIA_PAGE_SIZE = 5;
+    const asistenciaRegistrosAll = [
+      { fecha: '25/08/2026', nivel: 'Avanzado', presente: true, registradoPor: 'Camargo Ezequiel' }, { fecha: '20/08/2026', nivel: 'Avanzado', presente: true, registradoPor: 'Camargo Ezequiel' },
+      { fecha: '18/08/2026', nivel: 'Intermedio', presente: false, registradoPor: 'Ana Gomez' }, { fecha: '13/08/2026', nivel: 'Avanzado', presente: true, registradoPor: 'Camargo Ezequiel' },
+      { fecha: '06/08/2026', nivel: 'Intermedio', presente: true, registradoPor: 'Ana Gomez' }, { fecha: '30/07/2026', nivel: 'Avanzado', presente: true, registradoPor: 'Camargo Ezequiel' },
+      { fecha: '23/07/2026', nivel: 'Intermedio', presente: false, registradoPor: 'Ana Gomez' }, { fecha: '16/07/2026', nivel: 'Avanzado', presente: true, registradoPor: 'Camargo Ezequiel' },
+    ].map(r => ({
+      fecha: r.fecha, nivel: r.nivel, registradoPor: r.registradoPor,
+      icon: icon(r.presente ? 'check' : 'x', 14),
+      label: r.presente ? 'Presente' : 'Ausente',
+      badgeStyle: `display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:${r.presente ? '#f0fdf4' : '#fef2f2'};color:${r.presente ? '#15803d' : '#b91c1c'};border:1px solid ${r.presente ? '#bbf7d0' : '#fecaca'}`,
+    }));
+    const asistenciaTotalPages = Math.max(1, Math.ceil(asistenciaRegistrosAll.length / ASISTENCIA_PAGE_SIZE));
+    const asistenciaPage = Math.min(s.asistenciaPage || 1, asistenciaTotalPages);
+    const asistenciaRegistrosPage = asistenciaRegistrosAll.slice((asistenciaPage - 1) * ASISTENCIA_PAGE_SIZE, asistenciaPage * ASISTENCIA_PAGE_SIZE);
+    const pagerBtnStyle = (disabled) => `display:flex;align-items:center;justify-content:center;padding:6px;border:1px solid #e4e4e7;border-radius:6px;background:white;cursor:${disabled ? 'not-allowed' : 'pointer'};color:${disabled ? '#d4d4d8' : '#27272a'}`;
+
+    const filteredPagos = s.pagos.filter(p => p.socio.toLowerCase().includes(s.searchTermPagos.toLowerCase()))
+      .map(p => ({ ...p, initials: initials(p.socio) }));
+
+    const actividades = MOCK_ACTIVIDADES.map(act => ({
+      ...act, onClick: () => this.setState({ selectedActividadId: act.id, actividadTab: 'info' }),
+      tipoStyle: `padding:4px 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;border-radius:6px;border:1px solid ${act.tipo === 'Regata' ? '#dbeafe' : '#d1fae5'};background:${act.tipo === 'Regata' ? '#eff6ff' : '#ecfdf5'};color:${act.tipo === 'Regata' ? '#1d4ed8' : '#047857'}`,
+    }));
+    const selectedActividad = MOCK_ACTIVIDADES.find(a => a.id === s.selectedActividadId) || null;
+    const logistica = MOCK_LOGISTICA.map(l => ({ ...l, initials: initials(l.socio) }));
+
+    const tiposCuota = MOCK_TIPOS_CUOTA.map(t => ({
+      ...t,
+      rowStyle: 'display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid #f4f4f5',
+      defaultBadge: t.porDefecto ? React.createElement('span', { style: { fontSize: '10px', background: '#f4f4f5', border: '1px solid #e4e4e7', padding: '2px 6px', borderRadius: '4px', color: '#52525b', fontWeight: 500 } }, 'Por defecto') : null,
+      onEdit: () => this.setState({ showTipoModal: true, tipoModalMode: 'edit', editingTipoId: t.id }),
+      onDelete: () => this.setState({ deletingTipoId: t.id }),
+    }));
+
+    const SOCIOS_PAGE_SIZE = 8;
+    const sociosTotalPages = Math.max(1, Math.ceil(filteredSocios.length / SOCIOS_PAGE_SIZE));
+    const sociosPage = Math.min(s.sociosPage || 1, sociosTotalPages);
+    const filteredSociosPage = filteredSocios.slice((sociosPage - 1) * SOCIOS_PAGE_SIZE, sociosPage * SOCIOS_PAGE_SIZE);
+    const sociosPagerStyle = (disabled) => `display:flex;align-items:center;justify-content:center;padding:6px;border:1px solid #e4e4e7;border-radius:6px;background:white;cursor:${disabled ? 'not-allowed' : 'pointer'};color:${disabled ? '#d4d4d8' : '#27272a'}`;
+
+    const totalSocios = MOCK_SOCIOS.length;
+    const pagadosMes = 2, pendientes = 1;
+    const chartBars = ['Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago'].map((label, i) => ({
+      label, style: `width:100%;background:#e4e4e7;border-radius:4px 4px 0 0;height:${[40, 65, 30, 80, 55, 70][i]}%`,
+    }));
+
+    const tabPillStyle = (active) => `padding:12px 0;font-size:14px;font-weight:500;border:none;background:none;cursor:pointer;border-bottom:2px solid ${active ? '#09090b' : 'transparent'};color:${active ? '#09090b' : '#71717a'}`;
+
+    return {
+      isInicio: tab === 'inicio', isSocios: tab === 'socios', isPagos: tab === 'pagos',
+      isActividades: tab === 'actividades', isEmbarcaciones: tab === 'embarcaciones', isColaboradores: tab === 'colaboradores', isConfiguracion: tab === 'configuracion',
+      headerTitle: title, headerSubtitle: subtitle, menuItems,
+      breadcrumbSegments: (() => {
+        const tabLabel = { inicio: 'Inicio', socios: 'Socios', pagos: 'Pagos', actividades: 'Actividades', embarcaciones: 'Embarcaciones', colaboradores: 'Colaboradores', configuracion: 'Configuración' }[tab] || title;
+        const segs = [{ label: tabLabel, onClick: tab === 'socios' && (s.showNewSocioModal || s.isTakingAttendance || s.isBulkPayment) ? () => this.setState({ showNewSocioModal: false, isTakingAttendance: false, isBulkPayment: false }) : null }];
+        if (tab === 'socios' && s.showNewSocioModal) segs.push({ label: 'Nuevo socio', onClick: null });
+        if (tab === 'socios' && s.isTakingAttendance) segs.push({ label: 'Asistencia', onClick: null });
+        if (tab === 'socios' && s.isBulkPayment) segs.push({ label: 'Registrar pago', onClick: null });
+        return segs.map((seg, i) => ({
+          label: seg.label, onClick: seg.onClick, clickable: !!seg.onClick, notClickable: !seg.onClick,
+          sepStyle: `display:${i === 0 ? 'none' : 'inline'};color:#d4d4d8;font-size:18px;margin:0 2px`,
+        }));
+      })(),
+      logoutIcon: icon('logout', 18, '#52525b'), settingsIcon: icon('settings', 18, '#52525b'), moonIcon: icon('moon', 18, '#52525b'),
+      settingsIconSm: icon('settings', 16), creditCardIconSm: icon('creditcard', 16),
+      usersIconSm: icon('users', 16, '#a1a1aa'), checkIconSm: icon('check', 16, '#a1a1aa'), alertIconSm: icon('alert', 16, '#a1a1aa'),
+      kpi: { total: totalSocios, pagados: pagadosMes, pendientes, recaudado: '$40.000', morosidad: ((pendientes / totalSocios) * 100).toFixed(1) + '%' },
+      chartBars,
+
+      showNewSocioModal: s.showNewSocioModal, notShowNewSocioModal: !s.showNewSocioModal,
+      openNewSocioModal: () => this.setState({ showNewSocioModal: true }),
+      closeNewSocioModal: () => this.setState({ showNewSocioModal: false }),
+      xIcon: icon('x', 20, '#a1a1aa'), xIconDark: icon('x', 16, '#09090b'), uploadIcon: icon('upload', 14, '#52525b'),
+      grupoFamiliarOptions: [...new Set(MOCK_SOCIOS.filter(so => so.grupoFamiliar).map(so => so.grupoFamiliar))],
+
+      isTakingAttendance: s.isTakingAttendance, notTakingAttendance: !s.isTakingAttendance && !s.isBulkPayment,
+      isBulkPayment: s.isBulkPayment, isNormalMode: !s.isTakingAttendance && !s.isBulkPayment,
+      showSociosHeaderActions: tab === 'socios' && !s.isTakingAttendance && !s.showNewSocioModal && !s.isBulkPayment,
+      showPagosHeaderActions: tab === 'pagos' && !s.showNewPagoModal,
+      showActividadesHeaderActions: tab === 'actividades' && !s.selectedActividadId,
+      startAttendance: () => this.setState({ isTakingAttendance: true }),
+      stopAttendance: () => this.setState({ isTakingAttendance: false, searchTerm: '' }),
+      startBulkPayment: () => this.setState({ isBulkPayment: true, bulkPaymentSelected: {} }),
+      stopBulkPayment: () => this.setState({ isBulkPayment: false, bulkPaymentSelected: {} }),
+      bulkPaymentPeriod: s.bulkPaymentPeriod, onBulkPaymentPeriodChange: (e) => this.setState({ bulkPaymentPeriod: e.target.value }),
+      periodOptions: ['Agosto de 2026', 'Septiembre de 2026', 'Octubre de 2026'],
+      bulkPaymentSelectedCount: Object.values(s.bulkPaymentSelected).filter(Boolean).length,
+      bulkPaymentNoneSelected: Object.values(s.bulkPaymentSelected).filter(Boolean).length === 0,
+      confirmBulkPaymentStyle: `display:flex;align-items:center;gap:8px;padding:8px 16px;border:none;border-radius:6px;font-size:14px;font-weight:500;background:${Object.values(s.bulkPaymentSelected).filter(Boolean).length === 0 ? '#3f3f46' : 'white'};color:${Object.values(s.bulkPaymentSelected).filter(Boolean).length === 0 ? '#a1a1aa' : '#09090b'};cursor:${Object.values(s.bulkPaymentSelected).filter(Boolean).length === 0 ? 'not-allowed' : 'pointer'}`,
+      confirmBulkPayment: () => this.setState(prev => {
+        const today = new Date().toLocaleDateString('es-AR');
+        const selectedIds = Object.keys(prev.bulkPaymentSelected).filter(id => prev.bulkPaymentSelected[id]).map(Number);
+        const nuevosPagos = selectedIds.map(id => {
+          const socio = MOCK_SOCIOS.find(so => so.id === id);
+          const tipo = MOCK_TIPOS_CUOTA.find(c => c.id === socio.tipoCuotaId);
+          return { id: Date.now() + id, socioId: id, socio: socio.nombre, periodo: prev.bulkPaymentPeriod, fecha: today, metodo: 'Efectivo', monto: `$ ${tipo ? tipo.monto : 0}` };
+        });
+        return { isBulkPayment: false, bulkPaymentSelected: {}, pagos: [...nuevosPagos, ...prev.pagos] };
+      }),
+      attendanceDate: s.attendanceDate, onAttendanceDateChange: (e) => this.setState({ attendanceDate: e.target.value }),
+      attendanceNivelFilter: s.attendanceNivelFilter, onAttendanceNivelChange: (e) => this.setState({ attendanceNivelFilter: e.target.value }),
+      attendanceEstadoFilter: s.attendanceEstadoFilter, onAttendanceEstadoChange: (e) => this.setState({ attendanceEstadoFilter: e.target.value }),
+      nivelOptions: [...new Set(MOCK_SOCIOS.map(so => so.nivel))],
+      searchTerm: s.searchTerm, onSearchChange: (e) => this.setState({ searchTerm: e.target.value }),
+      searchIconGray: React.createElement('div', { style: { position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', display: 'flex', color: '#a1a1aa', pointerEvents: 'none' } }, icon('search', 16)),
+      searchIconPlain: icon('search', 16), searchBoxOpen: s.searchBoxOpen, toggleSearchBox: () => this.setState(prev => ({ searchBoxOpen: !prev.searchBoxOpen })),
+      searchInputWrapStyle: `overflow:hidden;transition:width 0.2s,margin-right 0.2s;width:${s.searchBoxOpen ? '220px' : '0px'};margin-right:${s.searchBoxOpen ? '8px' : '0px'};`,
+      checkIcon: icon('check', 16, '#27272a'), shareIcon: s.isLinkCopied ? icon('check', 16, '#15803d') : icon('share', 16, '#27272a'),
+      shareLabel: s.isLinkCopied ? '¡Copiado!' : 'Compartir',
+      shareButtonStyle: `display:flex;align-items:center;justify-content:center;padding:8px;border-radius:6px;cursor:pointer;border:1px solid ${s.isLinkCopied ? '#bbf7d0' : '#e4e4e7'};background:${s.isLinkCopied ? '#f0fdf4' : 'white'};color:${s.isLinkCopied ? '#15803d' : '#27272a'}`,
+      copyLink: () => { this.setState({ isLinkCopied: true }); setTimeout(() => this.setState({ isLinkCopied: false }), 2000); },
+      shareMenuOpen: s.shareMenuOpen, toggleShareMenu: () => this.setState(prev => ({ shareMenuOpen: !prev.shareMenuOpen })),
+      publicLinkUrl: 'https://docs.google.com/forms/d/16YWPLz7-nInWGmhCfsxtM-f1sox32rOx81t5Ay4sMx0/edit',
+      publicFormStatusLabel: s.publicFormEnabled ? 'Activo — cualquiera con el enlace puede inscribirse' : 'Desactivado — el enlace ya no acepta inscripciones',
+      togglePublicForm: () => this.setState(prev => ({ publicFormEnabled: !prev.publicFormEnabled })),
+      publicFormToggleStyle: `width:40px;height:24px;border-radius:9999px;position:relative;cursor:pointer;border:none;padding:0;background:${s.publicFormEnabled ? '#09090b' : '#d4d4d8'}`,
+      publicFormThumbStyle: `width:16px;height:16px;background:white;border-radius:9999px;position:absolute;top:4px;left:${s.publicFormEnabled ? '20px' : '4px'};box-shadow:0 1px 2px rgba(0,0,0,0.15);transition:left 0.15s`,
+      plusIcon: icon('plus', 16), downloadIcon: icon('download', 18, '#52525b'),
+      sociosCount: totalSocios, filteredSociosPage,
+      sociosPage, sociosTotalPages, sociosOnFirstPage: sociosPage <= 1, sociosOnLastPage: sociosPage >= sociosTotalPages,
+      sociosPrevStyle: sociosPagerStyle(sociosPage <= 1), sociosNextStyle: sociosPagerStyle(sociosPage >= sociosTotalPages),
+      sociosPrevPage: () => this.setState(p => ({ sociosPage: Math.max(1, (p.sociosPage || 1) - 1) })),
+      sociosNextPage: () => this.setState(p => ({ sociosPage: Math.min(sociosTotalPages, (p.sociosPage || 1) + 1) })),
+      arrowLeftIcon: icon('arrowleft', 16), arrowRightIcon: icon('arrowright', 16),
+
+      columnsIcon: icon('columns', 16), columnsMenuOpen: s.columnsMenuOpen,
+      toggleColumnsMenu: () => this.setState(prev => ({ columnsMenuOpen: !prev.columnsMenuOpen })),
+      columnOptions: [
+        { key: 'email', label: 'Email' }, { key: 'telefono', label: 'Teléfono' }, { key: 'dni', label: 'DNI' },
+        { key: 'tipoCuota', label: 'Tipo de cuota' },
+        { key: 'estado', label: 'Estado' }, { key: 'mesActual', label: 'Mes actual' },
+      ].map(c => ({
+        label: c.label, visible: s.visibleColumns[c.key],
+        onToggle: () => this.setState(prev => ({ visibleColumns: { ...prev.visibleColumns, [c.key]: !prev.visibleColumns[c.key] } })),
+      })),
+      colEmail: s.visibleColumns.email, colTelefono: s.visibleColumns.telefono, colDni: s.visibleColumns.dni && !s.isBulkPayment,
+      colTipoCuota: s.visibleColumns.tipoCuota,
+      colEstado: s.visibleColumns.estado, colMesActual: s.visibleColumns.mesActual,
+      colEmailAndNotAttendance: s.visibleColumns.email && !s.isTakingAttendance && !s.isBulkPayment,
+      colTelefonoAndNotAttendance: s.visibleColumns.telefono && !s.isTakingAttendance && !s.isBulkPayment,
+      colTipoCuotaAndNotAttendance: s.visibleColumns.tipoCuota && !s.isTakingAttendance && !s.isBulkPayment,
+      colEstadoAndNotAttendance: s.visibleColumns.estado && !s.isTakingAttendance && !s.isBulkPayment,
+      colMesActualAndNotAttendance: s.visibleColumns.mesActual && !s.isTakingAttendance && !s.isBulkPayment,
+
+      hasSelectedSocio: !!selectedSocio, selectedSocio, selectedSocioPagos, selectedSocioNoPagos: selectedSocioPagos.length === 0,
+      closeSocioDrawer: () => this.setState({ selectedSocioId: null }),
+      isSocioTabPerfil: s.socioTab === 'perfil', isSocioTabHistorial: s.socioTab === 'historial', isSocioTabAsistencia: s.socioTab === 'asistencia',
+      setSocioTabPerfil: () => this.setState({ socioTab: 'perfil' }), setSocioTabHistorial: () => this.setState({ socioTab: 'historial' }), setSocioTabAsistencia: () => this.setState({ socioTab: 'asistencia' }),
+      socioTabPerfilStyle: tabPillStyle(s.socioTab === 'perfil'), socioTabHistorialStyle: tabPillStyle(s.socioTab === 'historial'), socioTabAsistenciaStyle: tabPillStyle(s.socioTab === 'asistencia'),
+      mailIcon: icon('mail', 16), phoneIcon: icon('phone', 16),
+      asistenciaRegistrosPage, asistenciaPage, asistenciaTotalPages,
+      asistenciaOnFirstPage: asistenciaPage <= 1, asistenciaOnLastPage: asistenciaPage >= asistenciaTotalPages,
+      asistenciaPrevStyle: pagerBtnStyle(asistenciaPage <= 1), asistenciaNextStyle: pagerBtnStyle(asistenciaPage >= asistenciaTotalPages),
+      asistenciaPrevPage: () => this.setState(p => ({ asistenciaPage: Math.max(1, (p.asistenciaPage || 1) - 1) })),
+      asistenciaNextPage: () => this.setState(p => ({ asistenciaPage: Math.min(asistenciaTotalPages, (p.asistenciaPage || 1) + 1) })),
+
+      tiposCuota,
+      searchTermPagos: s.searchTermPagos, onSearchPagosChange: (e) => this.setState({ searchTermPagos: e.target.value }),
+      pagoTab: s.pagoTab, isPagoTabEstado: s.pagoTab === 'estado', isPagoTabHistorial: s.pagoTab === 'historial',
+      setPagoTabEstado: () => this.setState({ pagoTab: 'estado' }), setPagoTabHistorial: () => this.setState({ pagoTab: 'historial' }),
+      pagoTabEstadoStyle: tabPillStyle(s.pagoTab === 'estado'), pagoTabHistorialStyle: tabPillStyle(s.pagoTab === 'historial'),
+      filteredPagos, creditCardIcon: icon('creditcard', 16), fileIcon: icon('file', 16, '#a1a1aa'), trashIcon: icon('trash', 16, '#a1a1aa'), alertIcon: icon('alert', 16, '#dc2626'),
+      showNewPagoModal: s.showNewPagoModal, openNewPagoModal: () => this.setState({ showNewPagoModal: true }), closeNewPagoModal: () => this.setState({ showNewPagoModal: false }),
+
+      actividades, hasSelectedActividad: !!selectedActividad, selectedActividad,
+      closeActividadDrawer: () => this.setState({ selectedActividadId: null }),
+      isActividadTabInfo: s.actividadTab === 'info', isActividadTabLogistica: s.actividadTab === 'logistica',
+      setActividadTabInfo: () => this.setState({ actividadTab: 'info' }), setActividadTabLogistica: () => this.setState({ actividadTab: 'logistica' }),
+      actividadTabInfoStyle: tabPillStyle(s.actividadTab === 'info'), actividadTabLogisticaStyle: tabPillStyle(s.actividadTab === 'logistica'),
+      calendarIconGray: icon('calendar', 16, '#a1a1aa'), mapPinIconGray: icon('mappin', 16, '#a1a1aa'), usersRoundIconGray: icon('usersround', 14, '#71717a'),
+      carIconSm: icon('car', 12, '#a1a1aa'), flagIconSm: icon('flag', 12, '#a1a1aa'), logistica,
+
+      embarcaciones: s.embarcaciones.map(emb => ({
+        ...emb,
+        estadoStyle: `padding:4px 10px;font-size:12px;border-radius:9999px;font-weight:500;${emb.estado === 'Disponible' ? 'background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0' : emb.estado === 'En mantenimiento' ? 'background:#fefce8;color:#a16207;border:1px solid #fef08a' : 'background:#fef2f2;color:#b91c1c;border:1px solid #fecaca'}`,
+        asignadoLabel: emb.asignadoA || '—',
+        onEdit: () => this.setState({ showEmbModal: true, embModalMode: 'edit', editingEmbId: emb.id, embNombre: emb.nombre, embTipo: emb.tipo, embEstado: emb.estado }),
+        onDelete: () => this.setState({ deletingEmbId: emb.id }),
+      })),
+      hasEmbarcaciones: s.embarcaciones.length > 0, noEmbarcaciones: s.embarcaciones.length === 0,
+      flagIconLg: icon('flag', 24, '#a1a1aa'),
+      openCreateEmb: () => this.setState({ showEmbModal: true, embModalMode: 'create', editingEmbId: null, embNombre: '', embTipo: 'K1 (Individual)', embEstado: 'Disponible' }),
+      closeEmbModal: () => this.setState({ showEmbModal: false }),
+      showEmbModal: s.showEmbModal,
+      embModalTitle: s.embModalMode === 'edit' ? 'Editar embarcación' : 'Nueva embarcación',
+      embModalAction: s.embModalMode === 'edit' ? 'Guardar cambios' : 'Crear embarcación',
+      embNombre: s.embNombre, embTipo: s.embTipo, embEstado: s.embEstado,
+      onEmbNombreChange: (e) => this.setState({ embNombre: e.target.value }),
+      onEmbTipoChange: (e) => this.setState({ embTipo: e.target.value }),
+      onEmbEstadoChange: (e) => this.setState({ embEstado: e.target.value }),
+      embInvalid: !s.embNombre.trim(),
+      saveEmbButtonStyle: `padding:8px 16px;border:none;border-radius:6px;font-size:14px;font-weight:500;background:${!s.embNombre.trim() ? '#d4d4d8' : '#09090b'};color:white;cursor:${!s.embNombre.trim() ? 'not-allowed' : 'pointer'}`,
+      saveEmb: () => this.setState(prev => {
+        if (!prev.embNombre.trim()) return {};
+        if (prev.embModalMode === 'edit') {
+          return {
+            showEmbModal: false,
+            embarcaciones: prev.embarcaciones.map(e => e.id === prev.editingEmbId ? { ...e, nombre: prev.embNombre, tipo: prev.embTipo, estado: prev.embEstado } : e),
+          };
+        }
+        return {
+          showEmbModal: false,
+          embarcaciones: [...prev.embarcaciones, { id: Date.now(), nombre: prev.embNombre, tipo: prev.embTipo, estado: prev.embEstado, asignadoA: null }],
+        };
+      }),
+      showDeleteEmbModal: !!s.deletingEmbId,
+      deletingEmbNombre: (s.embarcaciones.find(e => e.id === s.deletingEmbId) || {}).nombre || '',
+      closeDeleteEmbModal: () => this.setState({ deletingEmbId: null }),
+      confirmDeleteEmb: () => this.setState(prev => ({ deletingEmbId: null, embarcaciones: prev.embarcaciones.filter(e => e.id !== prev.deletingEmbId) })),
+
+      showNewColabModal: s.showNewColabModal, openNewColabModal: () => this.setState({ showNewColabModal: true }), closeNewColabModal: () => this.setState({ showNewColabModal: false }),
+      colaboradores: s.colaboradores.map(c => ({
+        ...c, nombreCompleto: `${c.nombre} ${c.apellido}`,
+        rolConNivel: c.nivel ? `${c.rol} — ${c.nivel}` : c.rol,
+        permisos: ROLE_PERMISSIONS[c.rol] || '',
+      })),
+      hasColaboradores: s.colaboradores.length > 0, noColaboradores: s.colaboradores.length === 0,
+      newColabEmail: s.newColabEmail, newColabNombre: s.newColabNombre, newColabApellido: s.newColabApellido, newColabRol: s.newColabRol, newColabNivel: s.newColabNivel,
+      onNewColabEmailChange: (e) => this.setState({ newColabEmail: e.target.value }),
+      onNewColabNombreChange: (e) => this.setState({ newColabNombre: e.target.value }),
+      onNewColabApellidoChange: (e) => this.setState({ newColabApellido: e.target.value }),
+      onNewColabRolChange: (e) => this.setState({ newColabRol: e.target.value }),
+      onNewColabNivelChange: (e) => this.setState({ newColabNivel: e.target.value }),
+      isRolProfesor: s.newColabRol === 'Profesor',
+      newColabRolDescription: ROLE_DESCRIPTIONS[s.newColabRol] || 'Elegí un rol para ver qué puede hacer.',
+      newColabInvalid: !s.newColabEmail || !s.newColabNombre || s.newColabRol === 'Seleccionar rol...' || (s.newColabRol === 'Profesor' && s.newColabNivel === 'Seleccionar nivel...'),
+      saveColabButtonStyle: (() => { const invalid = !s.newColabEmail || !s.newColabNombre || s.newColabRol === 'Seleccionar rol...' || (s.newColabRol === 'Profesor' && s.newColabNivel === 'Seleccionar nivel...'); return `padding:8px 16px;border:none;border-radius:6px;font-size:14px;font-weight:500;background:${invalid ? '#d4d4d8' : '#09090b'};color:white;cursor:${invalid ? 'not-allowed' : 'pointer'}`; })(),
+      saveNewColab: () => this.setState(prev => ({
+        showNewColabModal: false,
+        colaboradores: [...prev.colaboradores, { id: Date.now(), email: prev.newColabEmail, nombre: prev.newColabNombre, apellido: prev.newColabApellido, rol: prev.newColabRol, nivel: prev.newColabRol === 'Profesor' ? prev.newColabNivel : null }],
+        newColabEmail: '', newColabNombre: '', newColabApellido: '', newColabRol: 'Seleccionar rol...', newColabNivel: 'Seleccionar nivel...',
+      })),
+      briefcaseIcon: icon('briefcase', 24, '#a1a1aa'), plusIconSm: icon('plus', 14), moreIcon: icon('more', 18, '#a1a1aa'), editIcon: icon('edit', 16),
+
+      showTipoModal: s.showTipoModal, showDeleteTipoModal: !!s.deletingTipoId,
+      tipoModalTitle: s.tipoModalMode === 'edit' ? 'Editar tipo de cuota' : 'Nuevo tipo de cuota',
+      tipoModalAction: s.tipoModalMode === 'edit' ? 'Guardar cambios' : 'Crear tipo',
+      tipoModalDefaults: (() => {
+        const t = MOCK_TIPOS_CUOTA.find(t => t.id === s.editingTipoId);
+        return t ? { nombre: t.nombre, monto: t.monto, porDefecto: t.porDefecto } : { nombre: '', monto: '', porDefecto: false };
+      })(),
+      openCreateTipo: () => this.setState({ showTipoModal: true, tipoModalMode: 'create', editingTipoId: null }),
+      closeTipoModal: () => this.setState({ showTipoModal: false }),
+      deletingTipoNombre: (MOCK_TIPOS_CUOTA.find(t => t.id === s.deletingTipoId) || {}).nombre || '',
+      closeDeleteTipoModal: () => this.setState({ deletingTipoId: null }),
+
+      emailToggleTrackStyle: `width:40px;height:24px;border-radius:9999px;position:relative;cursor:pointer;border:none;padding:0;background:${s.emailNotif ? '#09090b' : '#d4d4d8'}`,
+      emailToggleThumbStyle: `width:16px;height:16px;background:white;border-radius:9999px;position:absolute;top:4px;left:${s.emailNotif ? '20px' : '4px'};box-shadow:0 1px 2px rgba(0,0,0,0.15);transition:left 0.15s`,
+      toggleEmailNotif: () => this.setState(prev => ({ emailNotif: !prev.emailNotif })),
+      userMenuOpen: s.userMenuOpen,
+      toggleUserMenu: () => this.setState(prev => ({ userMenuOpen: !prev.userMenuOpen })),
+      openMiCuenta: () => this.setState({ activeTab: 'configuracion', userMenuOpen: false }),
+      logoutClick: () => this.setState({ userMenuOpen: false }),
+      settingsIconSm2: icon('settings', 14, '#71717a'), userIconSm: icon('user', 14, '#71717a'),
+      uploadIconLg: icon('upload', 28, '#a1a1aa'),
+
+      sidebarStyle: `width:${s.sidebarCollapsed ? '72px' : '256px'};background:#ffffff;border-right:1px solid #e4e4e7;height:100vh;display:flex;flex-direction:column;justify-content:space-between;flex-shrink:0;transition:width 0.15s`,
+      sidebarExpanded: !s.sidebarCollapsed,
+      toggleSidebar: () => this.setState(prev => ({ sidebarCollapsed: !prev.sidebarCollapsed })),
+      panelLeftIcon: icon('panelleft', 18),
+
+      orgMenuOpen: s.orgMenuOpen,
+      toggleOrgMenu: () => this.setState(prev => ({ orgMenuOpen: !prev.orgMenuOpen })),
+      activeOrg: MOCK_ORGS.find(o => o.id === s.activeOrgId) || MOCK_ORGS[0],
+      orgOptions: MOCK_ORGS.map(org => ({
+        ...org,
+        onClick: () => this.setState({ activeOrgId: org.id, orgMenuOpen: false }),
+        style: `width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;border:none;cursor:pointer;font-size:13px;text-align:left;background:${org.id === s.activeOrgId ? '#f4f4f5' : 'none'};color:#27272a`,
+      })),
+      createOrg: () => this.setState({ orgMenuOpen: false }),
+    };
+  }
+}
+</script>
+</body>
+</html>
