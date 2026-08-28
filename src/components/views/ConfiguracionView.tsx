@@ -1,16 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  CreditCard,
-  Download,
-  Plus,
-  Settings,
-  Star,
-  Trash2,
-  Upload,
-  X,
-} from "lucide-react";
+import { Download, Plus, Star, Trash2, Upload, X } from "lucide-react";
 import {
   addTipoCuota,
   deleteTipoCuota,
@@ -20,7 +11,8 @@ import {
 import { addSociosBatch } from "@/lib/data/socios";
 import { DEFAULT_CONFIG, saveClubConfig, useClubConfig } from "@/lib/data/config";
 import { downloadCsv, normalizeHeader, parseCsv, toCsv } from "@/lib/csv";
-import type { ClubConfig, Socio, SocioEstado } from "@/lib/types";
+import { formatMonto, formatMontoInput, parseMontoInput } from "@/lib/format";
+import type { ClubConfig, Socio, SocioEstado, TipoCuota } from "@/lib/types";
 
 const PLANTILLA_HEADERS = [
   "Nombre Completo",
@@ -106,35 +98,44 @@ export function ConfiguracionView() {
     await saveClubConfig({ enviarEmails: !config.enviarEmails });
   };
 
-  // Modal de nuevo tipo de cuota
+  // Modal de nuevo tipo de cuota / edición
   const [showNuevoTipo, setShowNuevoTipo] = useState(false);
+  const [editingTipoId, setEditingTipoId] = useState<string | null>(null);
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevoMonto, setNuevoMonto] = useState("");
-  const [nuevoPorDefecto, setNuevoPorDefecto] = useState(false);
   const [submittingTipo, setSubmittingTipo] = useState(false);
+
+  const openNuevoTipoModal = () => {
+    setEditingTipoId(null);
+    setNuevoNombre("");
+    setNuevoMonto("");
+    setShowNuevoTipo(true);
+  };
+
+  const openEditarTipoModal = (cuota: TipoCuota) => {
+    setEditingTipoId(cuota.id);
+    setNuevoNombre(cuota.nombre);
+    setNuevoMonto(formatMonto(cuota.monto));
+    setShowNuevoTipo(true);
+  };
 
   const closeNuevoTipoModal = () => {
     setShowNuevoTipo(false);
+    setEditingTipoId(null);
     setNuevoNombre("");
     setNuevoMonto("");
-    setNuevoPorDefecto(false);
   };
 
   const handleGuardarTipo = async () => {
     if (!nuevoNombre.trim()) return;
     setSubmittingTipo(true);
     try {
-      if (nuevoPorDefecto) {
-        const otros = tiposCuota.filter((t) => t.porDefecto);
-        for (const otro of otros) {
-          await updateTipoCuota(otro.id, { porDefecto: false });
-        }
+      const data = { nombre: nuevoNombre.trim(), monto: parseMontoInput(nuevoMonto) };
+      if (editingTipoId) {
+        await updateTipoCuota(editingTipoId, data);
+      } else {
+        await addTipoCuota({ ...data, porDefecto: false });
       }
-      await addTipoCuota({
-        nombre: nuevoNombre.trim(),
-        monto: Number(nuevoMonto) || 0,
-        porDefecto: nuevoPorDefecto,
-      });
       closeNuevoTipoModal();
     } finally {
       setSubmittingTipo(false);
@@ -228,15 +229,6 @@ export function ConfiguracionView() {
 
   return (
     <div className="px-4 lg:px-6 py-6 space-y-8">
-      <div className="flex gap-2 border-b mb-6">
-        <button className="px-4 py-2 text-sm font-medium border-b-2 border-gray-900 text-gray-900 flex items-center gap-2">
-          <Settings size={16} /> General
-        </button>
-        <button className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 flex items-center gap-2">
-          <CreditCard size={16} /> Pagos y Cuotas
-        </button>
-      </div>
-
       {/* Información del Club */}
       <div className="bg-white border rounded-xl shadow-sm p-6 space-y-4">
         <div>
@@ -294,7 +286,7 @@ export function ConfiguracionView() {
             </p>
           </div>
           <button
-            onClick={() => setShowNuevoTipo(true)}
+            onClick={openNuevoTipoModal}
             className="flex items-center gap-2 text-sm font-medium text-gray-900 border px-3 py-1.5 rounded-md hover:bg-gray-50"
           >
             <Plus size={16} /> Nuevo tipo
@@ -308,7 +300,11 @@ export function ConfiguracionView() {
             <div className="p-4 text-sm text-gray-500">Todavía no hay tipos de cuota creados.</div>
           ) : (
             tiposCuota.map((cuota) => (
-              <div key={cuota.id} className="flex justify-between items-center p-4 hover:bg-gray-50">
+              <div
+                key={cuota.id}
+                onClick={() => openEditarTipoModal(cuota)}
+                className="flex justify-between items-center p-4 hover:bg-gray-50 cursor-pointer"
+              >
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm text-gray-900">{cuota.nombre}</span>
@@ -318,12 +314,15 @@ export function ConfiguracionView() {
                       </span>
                     )}
                   </div>
-                  <span className="text-sm text-gray-500">${cuota.monto} / mes</span>
+                  <span className="text-sm text-gray-500">$ {formatMonto(cuota.monto)} / mes</span>
                 </div>
                 <div className="flex items-center gap-1">
                   {!cuota.porDefecto && (
                     <button
-                      onClick={() => handleMarcarDefecto(cuota.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarcarDefecto(cuota.id);
+                      }}
                       title="Marcar como tipo por defecto"
                       className="p-1.5 text-gray-400 hover:text-gray-900"
                     >
@@ -331,7 +330,10 @@ export function ConfiguracionView() {
                     </button>
                   )}
                   <button
-                    onClick={() => handleEliminarTipo(cuota.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEliminarTipo(cuota.id);
+                    }}
                     title="Eliminar tipo de cuota"
                     className="p-1.5 text-gray-400 hover:text-red-600"
                   >
@@ -349,7 +351,7 @@ export function ConfiguracionView() {
             type="number"
             value={form.diaVencimiento}
             onChange={(e) => setForm({ ...form, diaVencimiento: Number(e.target.value) || 0 })}
-            className="w-full max-w-[150px] px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
           />
           <p className="text-xs text-gray-500 mt-1">
             Día del mes en que vence el pago de todas las cuotas.
@@ -385,16 +387,6 @@ export function ConfiguracionView() {
               }`}
             />
           </button>
-        </div>
-
-        <div className="pt-4 border-t flex items-center justify-between opacity-60">
-          <div>
-            <p className="text-sm font-medium text-gray-900">Recordatorios por WhatsApp</p>
-            <p className="text-xs text-gray-500">Notificaciones automáticas vía WhatsApp</p>
-          </div>
-          <span className="px-2 py-1 bg-gray-100 text-gray-600 border text-xs rounded-md font-medium">
-            Próximamente
-          </span>
         </div>
       </div>
 
@@ -460,7 +452,9 @@ export function ConfiguracionView() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b flex justify-between items-center">
-              <h3 className="font-semibold text-lg">Nuevo tipo de cuota</h3>
+              <h3 className="font-semibold text-lg">
+                {editingTipoId ? "Editar tipo de cuota" : "Nuevo tipo de cuota"}
+              </h3>
               <button onClick={closeNuevoTipoModal} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>
@@ -478,23 +472,23 @@ export function ConfiguracionView() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Monto mensual</label>
-                <input
-                  type="number"
-                  value={nuevoMonto}
-                  onChange={(e) => setNuevoMonto(e.target.value)}
-                  placeholder="0"
-                  className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                />
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={nuevoMonto}
+                    onChange={(e) => setNuevoMonto(formatMontoInput(e.target.value))}
+                    placeholder="0"
+                    className="w-full pl-7 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  />
+                </div>
               </div>
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={nuevoPorDefecto}
-                  onChange={(e) => setNuevoPorDefecto(e.target.checked)}
-                  className="rounded border-gray-300"
-                />
-                Marcar como tipo por defecto
-              </label>
+              {editingTipoId && (
+                <p className="text-xs text-gray-500">
+                  Para marcarlo como tipo por defecto, usá la estrella en la lista.
+                </p>
+              )}
             </div>
             <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
               <button
