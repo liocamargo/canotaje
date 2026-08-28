@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Star, Trash2, X } from "lucide-react";
 import { addGrupo, deleteGrupo, updateGrupo, useGrupos } from "@/lib/data/grupos";
 import { useStaff } from "@/lib/data/staff";
 import { useSocios } from "@/lib/data/socios";
@@ -42,7 +42,7 @@ export function GruposCard() {
       if (editingId) {
         await updateGrupo(editingId, { nombre: nombre.trim() });
       } else {
-        await addGrupo({ nombre: nombre.trim(), profesorEmail: "" });
+        await addGrupo({ nombre: nombre.trim(), profesorEmail: "", porDefecto: false });
       }
       close();
     } finally {
@@ -58,6 +58,14 @@ export function GruposCard() {
     ) {
       await deleteGrupo(id);
     }
+  };
+
+  const handleMarcarDefecto = async (id: string) => {
+    const otros = grupos.filter((g) => g.porDefecto && g.id !== id);
+    for (const otro of otros) {
+      await updateGrupo(otro.id, { porDefecto: false });
+    }
+    await updateGrupo(id, { porDefecto: true });
   };
 
   const contarSocios = (grupoId: string) => socios.filter((s) => s.grupoId === grupoId).length;
@@ -97,22 +105,43 @@ export function GruposCard() {
               className="flex justify-between items-center p-4 hover:bg-gray-50 cursor-pointer"
             >
               <div>
-                <span className="font-medium text-sm text-gray-900">{g.nombre}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm text-gray-900">{g.nombre}</span>
+                  {g.porDefecto && (
+                    <span className="text-[10px] bg-gray-100 border px-1.5 py-0.5 rounded text-gray-600 font-medium">
+                      Por defecto
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-500">
                   {nombreProfesor(g.profesorEmail)} · {contarSocios(g.id)} socio
                   {contarSocios(g.id) === 1 ? "" : "s"}
                 </p>
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEliminar(g.id);
-                }}
-                title="Eliminar grupo"
-                className="p-1.5 text-gray-400 hover:text-red-600"
-              >
-                <Trash2 size={16} />
-              </button>
+              <div className="flex items-center gap-1">
+                {!g.porDefecto && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMarcarDefecto(g.id);
+                    }}
+                    title="Marcar como grupo por defecto"
+                    className="p-1.5 text-gray-400 hover:text-gray-900"
+                  >
+                    <Star size={16} />
+                  </button>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEliminar(g.id);
+                  }}
+                  title="Eliminar grupo"
+                  className="p-1.5 text-gray-400 hover:text-red-600"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
           ))
         )}
@@ -140,7 +169,8 @@ export function GruposCard() {
               </div>
               {editingId && (
                 <p className="text-xs text-gray-500">
-                  Para asignarle un profesor, editá su perfil desde Colaboradores.
+                  Para asignarle un profesor, editá su perfil desde Colaboradores. Para
+                  marcarlo como grupo por defecto, usá la estrella en la lista.
                 </p>
               )}
             </div>

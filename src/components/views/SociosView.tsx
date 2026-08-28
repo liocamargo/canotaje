@@ -3,33 +3,38 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { orderBy, where } from "firebase/firestore";
 import {
+  AlertCircle,
   Calendar,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Columns3,
   Download,
+  Edit2,
   Mail,
   Paperclip,
   Phone,
   Search,
+  Trash2,
   UsersRound,
   X,
 } from "lucide-react";
 import { SideDrawer } from "@/components/layout/SideDrawer";
 import type { OnBreadcrumbChange } from "@/components/layout/breadcrumb";
-import { RegistrarPagoModal } from "@/components/shared/RegistrarPagoModal";
 import { useCollection } from "@/lib/data/useCollection";
-import { addSocio, useSocios } from "@/lib/data/socios";
+import { addSocio, deleteSocio, updateSocio, useSocios } from "@/lib/data/socios";
+import { addPagosBatch } from "@/lib/data/pagos";
 import { useTiposCuota } from "@/lib/data/tiposCuota";
 import { useGrupos } from "@/lib/data/grupos";
 import { useAsistenciasPorFecha, useAsistenciasPorSocio, toggleAsistencia } from "@/lib/data/asistencias";
-import { uploadComprobante } from "@/lib/storage";
+import { uploadArchivoSocio, type SocioDocTipo } from "@/lib/storage";
 import { downloadCsv, toCsv } from "@/lib/csv";
-import type { Pago, Socio, SocioDeuda, SocioEstado } from "@/lib/types";
+import { getFechaHoy, getPeriodoActual } from "@/lib/format";
+import type { MetodoPago, Pago, Socio, SocioDeuda, SocioEstado } from "@/lib/types";
 
-type SocioTab = "perfil" | "historial" | "asistencia";
+type SocioTab = "datos" | "asistencia" | "historial";
 type ColumnKey = "nombre" | "email" | "dni" | "telefono" | "tipoCuota" | "grupo";
+type TableMode = "normal" | "asistencia" | "pago";
 
 const COLUMN_LABELS: Record<ColumnKey, string> = {
   nombre: "Nombre",
@@ -42,6 +47,7 @@ const COLUMN_LABELS: Record<ColumnKey, string> = {
 const COLUMN_KEYS: ColumnKey[] = ["nombre", "email", "dni", "telefono", "tipoCuota", "grupo"];
 const COLUMNS_STORAGE_KEY = "canotaje:sociosColumnas";
 const PAGE_SIZE = 14;
+const METODOS: MetodoPago[] = ["Efectivo", "Transferencia", "Tarjeta"];
 
 const ESTADOS: SocioEstado[] = ["Activo", "Pendiente", "Inactivo"];
 
@@ -54,6 +60,8 @@ const EMPTY_FORM = {
   fechaNacimiento: "",
   contactoEmergencia: "",
   grupoId: "",
+  grupoSanguineo: "",
+  obraSocial: "",
   condicionMedica: "",
 };
 
@@ -71,6 +79,56 @@ function formatFecha(fecha: string) {
   const [y, m, d] = fecha.split("-");
   if (!y || !m || !d) return fecha;
   return `${d}/${m}/${y}`;
+}
+
+function DocumentoRow({
+  label,
+  url,
+  uploading,
+  onUpload,
+}: {
+  label: string;
+  url?: string;
+  uploading: boolean;
+  onUpload: (file: File) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between p-3 border rounded-lg text-sm">
+      <div className="flex items-center gap-2">
+        {url ? (
+          <CheckCircle2 size={16} className="text-green-600" />
+        ) : (
+          <AlertCircle size={16} className="text-gray-400" />
+        )}
+        <span className={url ? "text-gray-900" : "text-gray-500"}>{label}</span>
+      </div>
+      <div className="flex items-center gap-3">
+        {url && (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+          >
+            Ver
+          </a>
+        )}
+        <label className="text-xs text-gray-600 hover:text-gray-900 font-medium cursor-pointer">
+          {uploading ? "Subiendo..." : url ? "Reemplazar" : "Adjuntar"}
+          <input
+            type="file"
+            className="hidden"
+            disabled={uploading}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) onUpload(file);
+            }}
+          />
+        </label>
+      </div>
+    </div>
+  );
 }
 
 export interface SociosViewHandle {
@@ -92,9 +150,10 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
   const { data: grupos } = useGrupos();
 
   const [showNewModal, setShowNewModal] = useState(false);
-  const [showRegistrarPago, setShowRegistrarPago] = useState(false);
-  const [selectedSocio, setSelectedSocio] = useState<Socio | null>(null);
-  const [socioTab, setSocioTab] = useState<SocioTab>("perfil");
+  const [editingSocioId, setEditingSocioId] = useState<string | null>(null);
+  const [selectedSocioId, setSelectedSocioId] = useState<string | null>(null);
+  const selectedSocio = socios.find((s) => s.id === selectedSocioId) ?? null;
+  const [socioTab, setSocioTab] = useState<SocioTab>("datos");
   const [searchTerm, setSearchTerm] = useState("");
   const [estadoFilter, setEstadoFilter] = useState<"todos" | SocioEstado>("todos");
   const [deudaFilter, setDeudaFilter] = useState<"todas" | SocioDeuda>("todas");
@@ -102,6 +161,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
   const [form, setForm] = useState(EMPTY_FORM);
   const [comprobanteFile, setComprobanteFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
   const [showColumnasMenu, setShowColumnasMenu] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>({
     nombre: true,
@@ -128,6 +188,15 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
     return map;
   }, [asistenciasDelDia]);
 
+  // --- Registrar pago (pantalla completa, igual que asistencia) ---
+  const [isRegisteringPago, setIsRegisteringPago] = useState(false);
+  const [pagoSeleccionados, setPagoSeleccionados] = useState<Set<string>>(new Set());
+  const [pagoMonto, setPagoMonto] = useState("15000");
+  const [pagoMetodo, setPagoMetodo] = useState<MetodoPago>("Efectivo");
+  const [confirmandoPagos, setConfirmandoPagos] = useState(false);
+
+  const tableMode: TableMode = isTakingAttendance ? "asistencia" : isRegisteringPago ? "pago" : "normal";
+
   // --- Pagos e historial de asistencia del socio seleccionado ---
   const { data: pagosSocio } = useCollection<Pago>(
     "pagos",
@@ -138,27 +207,56 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
   const { data: asistenciasSocio } = useAsistenciasPorSocio(selectedSocio?.id ?? "");
 
   const tipoCuotaPorDefecto = tiposCuota.find((c) => c.porDefecto) || tiposCuota[0];
+  const grupoPorDefecto = grupos.find((g) => g.porDefecto) || null;
 
   const finalizarAsistencia = () => {
     setIsTakingAttendance(false);
     setSearchTerm("");
   };
 
+  const cancelarRegistroPago = () => {
+    setIsRegisteringPago(false);
+    setSearchTerm("");
+    setPagoSeleccionados(new Set());
+  };
+
   useImperativeHandle(ref, () => ({
-    abrirNuevoSocio: () => setShowNewModal(true),
-    abrirRegistrarPago: () => setShowRegistrarPago(true),
-    activarAsistencia: () => setIsTakingAttendance(true),
+    abrirNuevoSocio: () => {
+      setEditingSocioId(null);
+      setForm({ ...EMPTY_FORM, grupoId: grupoPorDefecto?.id ?? "" });
+      setComprobanteFile(null);
+      setShowNewModal(true);
+    },
+    abrirRegistrarPago: () => {
+      setIsTakingAttendance(false);
+      setIsRegisteringPago(true);
+      setSearchTerm("");
+      setPagoSeleccionados(new Set());
+      setPagoMonto("15000");
+      setPagoMetodo("Efectivo");
+    },
+    activarAsistencia: () => {
+      setIsRegisteringPago(false);
+      setIsTakingAttendance(true);
+    },
   }));
 
   useEffect(() => {
-    onBreadcrumbChange?.(isTakingAttendance ? { label: "Asistencia", onReset: finalizarAsistencia } : null);
+    if (isTakingAttendance) {
+      onBreadcrumbChange?.({ label: "Asistencia", onReset: finalizarAsistencia });
+    } else if (isRegisteringPago) {
+      onBreadcrumbChange?.({ label: "Registrar Pago", onReset: cancelarRegistroPago });
+    } else {
+      onBreadcrumbChange?.(null);
+    }
     return () => onBreadcrumbChange?.(null);
-  }, [isTakingAttendance, onBreadcrumbChange]);
+  }, [isTakingAttendance, isRegisteringPago, onBreadcrumbChange]);
 
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(COLUMNS_STORAGE_KEY);
       if (raw) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- restaura la preferencia guardada del navegador al montar
         setVisibleColumns((prev) => ({ ...prev, ...JSON.parse(raw) }));
       }
     } catch {
@@ -183,6 +281,39 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
     await toggleAsistencia(socioId, attendanceDate, !current);
   };
 
+  const togglePagoSeleccion = (socioId: string) => {
+    setPagoSeleccionados((prev) => {
+      const next = new Set(prev);
+      if (next.has(socioId)) next.delete(socioId);
+      else next.add(socioId);
+      return next;
+    });
+  };
+
+  const handleConfirmarPagos = async () => {
+    if (pagoSeleccionados.size === 0) return;
+    setConfirmandoPagos(true);
+    try {
+      const periodoActual = getPeriodoActual();
+      const fecha = getFechaHoy();
+      const montoNum = Number(pagoMonto) || 0;
+      const seleccionados = socios.filter((s) => pagoSeleccionados.has(s.id));
+      await addPagosBatch(
+        seleccionados.map((s) => ({
+          socioId: s.id,
+          socio: s.nombreCompleto,
+          periodo: periodoActual,
+          fecha,
+          metodo: pagoMetodo,
+          monto: montoNum,
+        }))
+      );
+      cancelarRegistroPago();
+    } finally {
+      setConfirmandoPagos(false);
+    }
+  };
+
   const filteredSocios = socios.filter((socio) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
@@ -198,6 +329,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- volver a la página 1 cuando cambian los filtros
     setPage(1);
   }, [searchTerm, estadoFilter, deudaFilter, grupoFilter]);
 
@@ -224,15 +356,41 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
     downloadCsv(`socios-${new Date().toISOString().slice(0, 10)}.csv`, toCsv([header, ...rows]));
   };
 
-  const handleCreateSocio = async () => {
+  const abrirEditarSocio = (socio: Socio) => {
+    setEditingSocioId(socio.id);
+    setForm({
+      nombreCompleto: socio.nombreCompleto,
+      estado: socio.estado,
+      email: socio.email,
+      telefono: socio.telefono ?? "",
+      dni: socio.dni,
+      fechaNacimiento: socio.fechaNacimiento ?? "",
+      contactoEmergencia: socio.contactoEmergencia ?? "",
+      grupoId: socio.grupoId ?? "",
+      grupoSanguineo: socio.grupoSanguineo ?? "",
+      obraSocial: socio.obraSocial ?? "",
+      condicionMedica: socio.condicionMedica ?? "",
+    });
+    setComprobanteFile(null);
+    setShowNewModal(true);
+  };
+
+  const cerrarModalSocio = () => {
+    setShowNewModal(false);
+    setEditingSocioId(null);
+    setForm(EMPTY_FORM);
+    setComprobanteFile(null);
+  };
+
+  const handleGuardarSocio = async () => {
     if (!form.nombreCompleto || !form.dni || !form.email) return;
     setSubmitting(true);
     try {
       let comprobanteInscripcionUrl: string | undefined;
       if (comprobanteFile) {
-        comprobanteInscripcionUrl = await uploadComprobante(form.dni, comprobanteFile);
+        comprobanteInscripcionUrl = await uploadArchivoSocio("comprobantes", form.dni, comprobanteFile);
       }
-      await addSocio({
+      const datosComunes = {
         nombreCompleto: form.nombreCompleto,
         email: form.email,
         dni: form.dni,
@@ -240,18 +398,51 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
         fechaNacimiento: form.fechaNacimiento || undefined,
         contactoEmergencia: form.contactoEmergencia || undefined,
         grupoId: form.grupoId || null,
+        grupoSanguineo: form.grupoSanguineo || undefined,
+        obraSocial: form.obraSocial || undefined,
         condicionMedica: form.condicionMedica || undefined,
-        comprobanteInscripcionUrl,
         estado: form.estado,
-        deuda: "Al día",
-        grupoFamiliar: null,
-        tipoCuotaId: tipoCuotaPorDefecto?.id || "",
-      });
-      setForm(EMPTY_FORM);
-      setComprobanteFile(null);
-      setShowNewModal(false);
+      };
+      if (editingSocioId) {
+        await updateSocio(editingSocioId, {
+          ...datosComunes,
+          ...(comprobanteInscripcionUrl ? { comprobanteInscripcionUrl } : {}),
+        });
+      } else {
+        await addSocio({
+          ...datosComunes,
+          comprobanteInscripcionUrl,
+          deuda: "Al día",
+          grupoFamiliar: null,
+          tipoCuotaId: tipoCuotaPorDefecto?.id || "",
+        });
+      }
+      cerrarModalSocio();
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleEliminarSocio = async (socio: Socio) => {
+    if (!window.confirm(`¿Eliminar a ${socio.nombreCompleto}? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    await deleteSocio(socio.id);
+    setSelectedSocioId(null);
+  };
+
+  const handleUploadDocumento = async (
+    campo: "fichaMedicaUrl" | "deslindeResponsabilidadUrl" | "comprobanteInscripcionUrl",
+    tipo: SocioDocTipo,
+    file: File
+  ) => {
+    if (!selectedSocio) return;
+    setUploadingDoc(campo);
+    try {
+      const url = await uploadArchivoSocio(tipo, selectedSocio.dni, file);
+      await updateSocio(selectedSocio.id, { [campo]: url });
+    } finally {
+      setUploadingDoc(null);
     }
   };
 
@@ -265,7 +456,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
   return (
     <div className="px-4 lg:px-6 py-6">
       {/* Cabecera de asistencia */}
-      {isTakingAttendance && (
+      {tableMode === "asistencia" && (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 bg-gray-900 p-4 rounded-xl shadow-sm text-white">
           <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto">
             <div>
@@ -300,7 +491,69 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
         </div>
       )}
 
-      {!isTakingAttendance && (
+      {/* Cabecera de registrar pago (misma mecánica que asistencia) */}
+      {tableMode === "pago" && (
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 bg-gray-900 p-4 rounded-xl shadow-sm text-white">
+          <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto">
+            <div>
+              <h3 className="font-semibold text-lg">Registrar Pago</h3>
+              <p className="text-xs text-gray-300">Seleccioná a los socios que pagaron y confirmá.</p>
+            </div>
+            <div className="h-8 w-px bg-gray-700 mx-2 hidden sm:block"></div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+              <input
+                type="number"
+                value={pagoMonto}
+                onChange={(e) => setPagoMonto(e.target.value)}
+                className="pl-7 pr-3 py-1.5 bg-gray-800 border border-gray-700 rounded-md text-sm w-28 focus:outline-none focus:ring-1 focus:ring-gray-500 text-white"
+              />
+            </div>
+            <div className="flex gap-1">
+              {METODOS.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setPagoMetodo(m)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium ${
+                    pagoMetodo === m ? "bg-white text-gray-900" : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar socio..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-1.5 bg-gray-800 border border-gray-700 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-500 text-white placeholder-gray-400"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={handleConfirmarPagos}
+              disabled={pagoSeleccionados.size === 0 || confirmandoPagos}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-gray-900 rounded-md text-sm font-medium hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {confirmandoPagos
+                ? "Registrando..."
+                : `Registrar ${pagoSeleccionados.size || ""} pago${pagoSeleccionados.size === 1 ? "" : "s"}`}
+            </button>
+            <button
+              onClick={cancelarRegistroPago}
+              className="flex items-center gap-2 px-4 py-2 border border-white/30 text-white rounded-md text-sm font-medium hover:bg-white/10"
+            >
+              <X size={16} /> Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tableMode === "normal" && (
         <div className="flex flex-col lg:flex-row justify-between gap-4 mb-6">
           {/* Filtros */}
           <div className="flex flex-wrap gap-4 items-end">
@@ -403,11 +656,17 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
       <div className="bg-white border rounded-lg overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50 border-b">
-            {isTakingAttendance ? (
+            {tableMode === "asistencia" ? (
               <tr>
                 <th className="px-6 py-3 font-medium text-gray-500">Socio</th>
                 <th className="px-6 py-3 font-medium text-gray-500">DNI</th>
                 <th className="px-6 py-3 font-medium text-gray-500 text-right">Estado de Asistencia</th>
+              </tr>
+            ) : tableMode === "pago" ? (
+              <tr>
+                <th className="px-6 py-3 font-medium text-gray-500">Socio</th>
+                <th className="px-6 py-3 font-medium text-gray-500">DNI</th>
+                <th className="px-6 py-3 font-medium text-gray-500 text-right">Seleccionado</th>
               </tr>
             ) : (
               <tr>
@@ -426,7 +685,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
             {loading ? (
               <tr>
                 <td
-                  colSpan={isTakingAttendance ? 3 : visibleColumnCount}
+                  colSpan={tableMode !== "normal" ? 3 : visibleColumnCount}
                   className="text-center py-10 text-gray-500 text-sm"
                 >
                   Cargando socios...
@@ -436,25 +695,27 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
               <>
                 {paginatedSocios.map((socio) => {
                   const isPresent = attendanceMap[socio.id] ?? false;
+                  const isSeleccionadoPago = pagoSeleccionados.has(socio.id);
+                  const highlighted = tableMode === "asistencia" ? isPresent : isSeleccionadoPago;
 
                   return (
                     <tr
                       key={socio.id}
                       className={`transition-colors ${
-                        isTakingAttendance
-                          ? isPresent
+                        tableMode !== "normal"
+                          ? highlighted
                             ? "bg-green-50/30"
                             : "hover:bg-gray-50"
                           : "hover:bg-gray-50 cursor-pointer"
                       }`}
                       onClick={() => {
-                        if (!isTakingAttendance) {
-                          setSelectedSocio(socio);
-                          setSocioTab("perfil");
+                        if (tableMode === "normal") {
+                          setSelectedSocioId(socio.id);
+                          setSocioTab("datos");
                         }
                       }}
                     >
-                      {isTakingAttendance ? (
+                      {tableMode === "asistencia" ? (
                         <>
                           <td className="px-6 py-4">
                             <p className="font-medium text-gray-900">{socio.nombreCompleto}</p>
@@ -474,6 +735,32 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                             >
                               <CheckCircle2 size={16} className={isPresent ? "text-green-600" : "text-gray-400"} />
                               {isPresent ? "Presente" : "Marcar asistencia"}
+                            </button>
+                          </td>
+                        </>
+                      ) : tableMode === "pago" ? (
+                        <>
+                          <td className="px-6 py-4">
+                            <p className="font-medium text-gray-900">{socio.nombreCompleto}</p>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">{socio.dni}</td>
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                togglePagoSeleccion(socio.id);
+                              }}
+                              className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                                isSeleccionadoPago
+                                  ? "bg-green-100 text-green-700 border border-green-200 shadow-sm"
+                                  : "bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200"
+                              }`}
+                            >
+                              <CheckCircle2
+                                size={16}
+                                className={isSeleccionadoPago ? "text-green-600" : "text-gray-400"}
+                              />
+                              {isSeleccionadoPago ? "Seleccionado" : "Seleccionar"}
                             </button>
                           </td>
                         </>
@@ -513,7 +800,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                 {filteredSocios.length === 0 && (
                   <tr>
                     <td
-                      colSpan={isTakingAttendance ? 3 : visibleColumnCount}
+                      colSpan={tableMode !== "normal" ? 3 : visibleColumnCount}
                       className="text-center py-10 text-gray-500 text-sm"
                     >
                       No se encontraron socios que coincidan con la búsqueda.
@@ -551,7 +838,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
       )}
 
       {/* Drawer: Detalle del Socio */}
-      <SideDrawer isOpen={!!selectedSocio} onClose={() => setSelectedSocio(null)}>
+      <SideDrawer isOpen={!!selectedSocio} onClose={() => setSelectedSocioId(null)}>
         {selectedSocio && (
           <>
             <div className="flex justify-between items-start p-6 border-b bg-gray-50/50">
@@ -564,40 +851,40 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                   <p className="text-sm text-gray-500">DNI: {selectedSocio.dni}</p>
                 </div>
               </div>
-              <button onClick={() => setSelectedSocio(null)} className="text-gray-400 hover:text-gray-600 p-1">
+              <button onClick={() => setSelectedSocioId(null)} className="text-gray-400 hover:text-gray-600 p-1">
                 <X size={20} />
               </button>
             </div>
 
             <div className="flex px-6 border-b overflow-x-auto no-scrollbar">
               <button
-                onClick={() => setSocioTab("perfil")}
+                onClick={() => setSocioTab("datos")}
                 className={`py-3 text-sm font-medium border-b-2 mr-6 shrink-0 ${
-                  socioTab === "perfil" ? "border-gray-900 text-gray-900" : "border-transparent text-gray-500 hover:text-gray-700"
+                  socioTab === "datos" ? "border-gray-900 text-gray-900" : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                Perfil
-              </button>
-              <button
-                onClick={() => setSocioTab("historial")}
-                className={`py-3 text-sm font-medium border-b-2 mr-6 shrink-0 ${
-                  socioTab === "historial" ? "border-gray-900 text-gray-900" : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Pagos
+                Datos
               </button>
               <button
                 onClick={() => setSocioTab("asistencia")}
-                className={`py-3 text-sm font-medium border-b-2 shrink-0 ${
+                className={`py-3 text-sm font-medium border-b-2 mr-6 shrink-0 ${
                   socioTab === "asistencia" ? "border-gray-900 text-gray-900" : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
                 Asistencia
               </button>
+              <button
+                onClick={() => setSocioTab("historial")}
+                className={`py-3 text-sm font-medium border-b-2 shrink-0 ${
+                  socioTab === "historial" ? "border-gray-900 text-gray-900" : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Pagos
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">
-              {socioTab === "perfil" ? (
+              {socioTab === "datos" ? (
                 <div className="space-y-6">
                   <div className="bg-gray-50 p-4 rounded-xl border flex justify-between items-center">
                     <div>
@@ -655,35 +942,70 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                     </div>
                   </div>
 
-                  {(selectedSocio.grupoId || selectedSocio.condicionMedica) && (
-                    <div className="space-y-3">
-                      {selectedSocio.grupoId && (
-                        <div>
-                          <p className="text-xs text-gray-500 font-medium mb-1">Grupo</p>
-                          <p className="text-sm text-gray-900">
-                            {grupos.find((g) => g.id === selectedSocio.grupoId)?.nombre || "—"}
-                          </p>
-                        </div>
-                      )}
-                      {selectedSocio.condicionMedica && (
-                        <div className="p-4 border rounded-xl border-dashed">
-                          <p className="text-xs text-gray-500 font-medium mb-1">Condición médica / alergias</p>
-                          <p className="text-sm text-gray-700">{selectedSocio.condicionMedica}</p>
-                        </div>
-                      )}
+                  {selectedSocio.grupoId && (
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium mb-1">Grupo</p>
+                      <p className="text-sm text-gray-900">
+                        {grupos.find((g) => g.id === selectedSocio.grupoId)?.nombre || "—"}
+                      </p>
                     </div>
                   )}
 
-                  {selectedSocio.comprobanteInscripcionUrl && (
-                    <a
-                      href={selectedSocio.comprobanteInscripcionUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      <Paperclip size={16} /> Ver comprobante de inscripción
-                    </a>
+                  {(selectedSocio.grupoSanguineo || selectedSocio.obraSocial || selectedSocio.condicionMedica) && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Salud</h4>
+                      <div className="space-y-3">
+                        {selectedSocio.grupoSanguineo && (
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium mb-1">Grupo sanguíneo</p>
+                            <p className="text-sm text-gray-900">{selectedSocio.grupoSanguineo}</p>
+                          </div>
+                        )}
+                        {selectedSocio.obraSocial && (
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium mb-1">Obra social</p>
+                            <p className="text-sm text-gray-900">{selectedSocio.obraSocial}</p>
+                          </div>
+                        )}
+                        {selectedSocio.condicionMedica && (
+                          <div className="p-4 border rounded-xl border-dashed">
+                            <p className="text-xs text-gray-500 font-medium mb-1">Condición médica / alergias</p>
+                            <p className="text-sm text-gray-700">{selectedSocio.condicionMedica}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
+
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Documentación</h4>
+                    <div className="space-y-2">
+                      <DocumentoRow
+                        label="Comprobante de inscripción"
+                        url={selectedSocio.comprobanteInscripcionUrl}
+                        uploading={uploadingDoc === "comprobanteInscripcionUrl"}
+                        onUpload={(file) =>
+                          handleUploadDocumento("comprobanteInscripcionUrl", "comprobantes", file)
+                        }
+                      />
+                      <DocumentoRow
+                        label="Ficha médica"
+                        url={selectedSocio.fichaMedicaUrl}
+                        uploading={uploadingDoc === "fichaMedicaUrl"}
+                        onUpload={(file) =>
+                          handleUploadDocumento("fichaMedicaUrl", "fichas-medicas", file)
+                        }
+                      />
+                      <DocumentoRow
+                        label="Deslinde de responsabilidad"
+                        url={selectedSocio.deslindeResponsabilidadUrl}
+                        uploading={uploadingDoc === "deslindeResponsabilidadUrl"}
+                        onUpload={(file) =>
+                          handleUploadDocumento("deslindeResponsabilidadUrl", "deslindes", file)
+                        }
+                      />
+                    </div>
+                  </div>
 
                   {selectedSocio.grupoFamiliar && (
                     <div className="p-4 border rounded-xl border-dashed">
@@ -696,27 +1018,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                     </div>
                   )}
                 </div>
-              ) : socioTab === "historial" ? (
-                <div className="space-y-4">
-                  {pagosSocio.length > 0 ? (
-                    pagosSocio.map((pago) => (
-                      <div key={pago.id} className="p-4 border rounded-xl bg-white shadow-sm flex justify-between items-center">
-                        <div>
-                          <p className="font-medium text-sm text-gray-900">{pago.periodo}</p>
-                          <p className="text-xs text-gray-500">
-                            {pago.fecha} • {pago.metodo}
-                          </p>
-                        </div>
-                        <span className="font-semibold text-sm text-gray-900">
-                          $ {pago.monto.toLocaleString("es-AR")}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-10 text-sm text-gray-500">No hay pagos registrados.</div>
-                  )}
-                </div>
-              ) : (
+              ) : socioTab === "asistencia" ? (
                 <div className="space-y-6">
                   <div className="bg-gray-50 p-4 rounded-xl border flex justify-between items-center">
                     <div>
@@ -758,41 +1060,53 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                     </div>
                   </div>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  {pagosSocio.length > 0 ? (
+                    pagosSocio.map((pago) => (
+                      <div key={pago.id} className="p-4 border rounded-xl bg-white shadow-sm flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-sm text-gray-900">{pago.periodo}</p>
+                          <p className="text-xs text-gray-500">
+                            {pago.fecha} • {pago.metodo}
+                          </p>
+                        </div>
+                        <span className="font-semibold text-sm text-gray-900">
+                          $ {pago.monto.toLocaleString("es-AR")}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 text-sm text-gray-500">No hay pagos registrados.</div>
+                  )}
+                </div>
               )}
             </div>
             <div className="p-4 border-t bg-gray-50 flex gap-2">
               <button
-                onClick={() => setShowRegistrarPago(true)}
-                className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800"
+                onClick={() => abrirEditarSocio(selectedSocio)}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800"
               >
-                Registrar Pago
+                <Edit2 size={16} /> Editar
+              </button>
+              <button
+                onClick={() => handleEliminarSocio(selectedSocio)}
+                className="flex items-center justify-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-md text-sm font-medium hover:bg-red-50"
+              >
+                <Trash2 size={16} /> Eliminar
               </button>
             </div>
           </>
         )}
       </SideDrawer>
 
-      <RegistrarPagoModal
-        open={showRegistrarPago}
-        onClose={() => setShowRegistrarPago(false)}
-        socios={socios}
-        initialSocio={selectedSocio}
-      />
-
-      {/* Modal Nuevo Socio */}
+      {/* Modal Nuevo/Editar Socio */}
       {showNewModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b flex justify-between items-center shrink-0">
-              <h3 className="text-lg font-semibold">Nuevo Socio</h3>
-              <button
-                onClick={() => {
-                  setShowNewModal(false);
-                  setForm(EMPTY_FORM);
-                  setComprobanteFile(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
+              <h3 className="text-lg font-semibold">{editingSocioId ? "Editar Socio" : "Nuevo Socio"}</h3>
+              <button onClick={cerrarModalSocio} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>
             </div>
@@ -801,7 +1115,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
               className="overflow-y-auto p-6 space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                handleCreateSocio();
+                handleGuardarSocio();
               }}
             >
               <div className="grid grid-cols-2 gap-4">
@@ -897,6 +1211,26 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Grupo sanguíneo</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: O+"
+                    value={form.grupoSanguineo}
+                    onChange={(e) => setForm((f) => ({ ...f, grupoSanguineo: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Obra social</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: OSDE, IAPOS..."
+                    value={form.obraSocial}
+                    onChange={(e) => setForm((f) => ({ ...f, obraSocial: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  />
+                </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium mb-1">
                     ¿Alguna condición médica o alergia que debamos conocer?
@@ -925,11 +1259,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowNewModal(false);
-                    setForm(EMPTY_FORM);
-                    setComprobanteFile(null);
-                  }}
+                  onClick={cerrarModalSocio}
                   className="px-4 py-2 border rounded-md text-sm font-medium hover:bg-gray-50"
                 >
                   Cancelar
@@ -939,7 +1269,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                   disabled={submitting}
                   className="px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting ? "Guardando..." : "Crear socio"}
+                  {submitting ? "Guardando..." : editingSocioId ? "Guardar cambios" : "Crear socio"}
                 </button>
               </div>
             </form>

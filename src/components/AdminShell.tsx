@@ -83,7 +83,7 @@ export function AdminShell() {
           {activeTab === "socios" && (
             <SociosView ref={sociosRef} onBreadcrumbChange={setBreadcrumbExtra} />
           )}
-          {activeTab === "pagos" && <PagosView onBreadcrumbChange={setBreadcrumbExtra} />}
+          {activeTab === "pagos" && <PagosView />}
           {activeTab === "actividades" && <ActividadesView onBreadcrumbChange={setBreadcrumbExtra} />}
           {activeTab === "colaboradores" && (
             <ColaboradoresView onBreadcrumbChange={setBreadcrumbExtra} />

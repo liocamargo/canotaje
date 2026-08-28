@@ -25,7 +25,11 @@ export interface Socio {
   fechaNacimiento?: string;
   contactoEmergencia?: string;
   condicionMedica?: string;
+  grupoSanguineo?: string;
+  obraSocial?: string;
   comprobanteInscripcionUrl?: string;
+  fichaMedicaUrl?: string;
+  deslindeResponsabilidadUrl?: string;
   estado: SocioEstado;
   deuda: SocioDeuda;
   grupoFamiliar?: string | null;
@@ -38,6 +42,7 @@ export interface Grupo {
   id: string;
   nombre: string;
   profesorEmail: string;
+  porDefecto: boolean;
 }
 
 export interface TipoCuota {
