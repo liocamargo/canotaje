@@ -8,11 +8,11 @@ import {
   updateTipoCuota,
   useTiposCuota,
 } from "@/lib/data/tiposCuota";
-import { addSociosBatch } from "@/lib/data/socios";
 import { DEFAULT_CONFIG, saveClubConfig, useClubConfig } from "@/lib/data/config";
-import { downloadCsv, normalizeHeader, parseCsv, toCsv } from "@/lib/csv";
+import { downloadCsv, parseCsv, toCsv } from "@/lib/csv";
 import { formatMonto, formatMontoInput, parseMontoInput } from "@/lib/format";
-import type { ClubConfig, Socio, SocioEstado, TipoCuota } from "@/lib/types";
+import { ImportarSociosModal } from "@/components/shared/ImportarSociosModal";
+import type { ClubConfig, TipoCuota } from "@/lib/types";
 
 const PLANTILLA_HEADERS = [
   "Nombre Completo",
@@ -25,44 +25,6 @@ const PLANTILLA_HEADERS = [
   "Categoría",
   "Condición médica o alergia",
 ];
-
-const ESTADOS_VALIDOS: SocioEstado[] = ["Activo", "Pendiente", "Inactivo"];
-
-interface FilaImportada {
-  nombreCompleto: string;
-  estado: SocioEstado;
-  email: string;
-  telefono: string;
-  dni: string;
-  fechaNacimiento: string;
-  contactoEmergencia: string;
-  categoria: string;
-  condicionMedica: string;
-}
-
-function mapearFila(headers: string[], fila: string[]): FilaImportada {
-  const get = (matcher: (h: string) => boolean) => {
-    const idx = headers.findIndex(matcher);
-    return idx === -1 ? "" : (fila[idx] ?? "").trim();
-  };
-
-  const estadoRaw = get((h) => h === "estado");
-  const estado = ESTADOS_VALIDOS.includes(estadoRaw as SocioEstado)
-    ? (estadoRaw as SocioEstado)
-    : "Pendiente";
-
-  return {
-    nombreCompleto: get((h) => h === "nombre completo" || h === "nombre y apellido"),
-    estado,
-    email: get((h) => h.includes("correo") || h === "email"),
-    telefono: get((h) => h.includes("telefono")),
-    dni: get((h) => h === "dni"),
-    fechaNacimiento: get((h) => h.includes("fecha de nacimiento")),
-    contactoEmergencia: get((h) => h.includes("contacto de emergencia")),
-    categoria: get((h) => h === "categoria"),
-    condicionMedica: get((h) => h.includes("condicion") || h.includes("alergia")),
-  };
-}
 
 export function ConfiguracionView() {
   const { config, loading: configLoading } = useClubConfig();
@@ -158,8 +120,10 @@ export function ConfiguracionView() {
 
   // Importar / exportar socios
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ ok: number; errores: string[] } | null>(null);
+  const [csvParaEmparejar, setCsvParaEmparejar] = useState<{ headers: string[]; rows: string[][] } | null>(
+    null
+  );
 
   const handleDescargarPlantilla = () => {
     downloadCsv("plantilla-socios.csv", toCsv([PLANTILLA_HEADERS]));
@@ -174,7 +138,6 @@ export function ConfiguracionView() {
     e.target.value = "";
     if (!file) return;
 
-    setImporting(true);
     setImportResult(null);
     try {
       const text = await file.text();
@@ -183,43 +146,9 @@ export function ConfiguracionView() {
         setImportResult({ ok: 0, errores: ["El archivo no tiene filas de datos para importar."] });
         return;
       }
-
-      const headers = rows[0].map(normalizeHeader);
-      const tipoCuotaPorDefecto = tiposCuota.find((t) => t.porDefecto) || tiposCuota[0];
-      const errores: string[] = [];
-      const nuevosSocios: Omit<Socio, "id" | "createdAt">[] = [];
-
-      rows.slice(1).forEach((fila, index) => {
-        const datos = mapearFila(headers, fila);
-        const numeroFila = index + 2;
-        if (!datos.nombreCompleto || !datos.dni || !datos.email) {
-          errores.push(`Fila ${numeroFila}: falta Nombre Completo, DNI o Correo Electrónico.`);
-          return;
-        }
-        nuevosSocios.push({
-          nombreCompleto: datos.nombreCompleto,
-          estado: datos.estado,
-          email: datos.email,
-          telefono: datos.telefono || undefined,
-          dni: datos.dni,
-          fechaNacimiento: datos.fechaNacimiento || undefined,
-          contactoEmergencia: datos.contactoEmergencia || undefined,
-          categoria: datos.categoria || undefined,
-          condicionMedica: datos.condicionMedica || undefined,
-          deuda: "Al día",
-          grupoFamiliar: null,
-          tipoCuotaId: tipoCuotaPorDefecto?.id || "",
-        });
-      });
-
-      if (nuevosSocios.length > 0) {
-        await addSociosBatch(nuevosSocios);
-      }
-      setImportResult({ ok: nuevosSocios.length, errores });
+      setCsvParaEmparejar({ headers: rows[0], rows: rows.slice(1) });
     } catch {
       setImportResult({ ok: 0, errores: ["No se pudo leer el archivo. Verificá que sea un CSV válido."] });
-    } finally {
-      setImporting(false);
     }
   };
 
@@ -409,10 +338,9 @@ export function ConfiguracionView() {
           />
           <button
             onClick={handleImportarClick}
-            disabled={importing}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800"
           >
-            <Upload size={16} /> {importing ? "Importando..." : "Importar socios (CSV)"}
+            <Upload size={16} /> Importar socios (CSV)
           </button>
           <button
             onClick={handleDescargarPlantilla}
@@ -446,6 +374,16 @@ export function ConfiguracionView() {
 
       {/* Acerca de */}
       <p className="text-xs text-gray-400 text-center">Canotaje Córdoba · v1.0.0</p>
+
+      {csvParaEmparejar && (
+        <ImportarSociosModal
+          headers={csvParaEmparejar.headers}
+          rows={csvParaEmparejar.rows}
+          tiposCuota={tiposCuota}
+          onClose={() => setCsvParaEmparejar(null)}
+          onImported={setImportResult}
+        />
+      )}
 
       {/* Modal de Nuevo Tipo de Cuota */}
       {showNuevoTipo && (

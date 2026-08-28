@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Briefcase, Edit2, Plus, Trash2, X } from "lucide-react";
 import { inviteStaff, removeStaff, updateStaffRole, useStaff } from "@/lib/data/staff";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import type { OnBreadcrumbChange } from "@/components/layout/breadcrumb";
 import type { Staff, StaffRole } from "@/lib/types";
 
 const ROL_LABEL: Record<StaffRole, string> = {
@@ -31,7 +32,7 @@ const EMPTY_FORM: StaffFormState = {
 export function ColaboradoresView({
   onBreadcrumbChange,
 }: {
-  onBreadcrumbChange?: (extra: string | null) => void;
+  onBreadcrumbChange?: OnBreadcrumbChange;
 }) {
   const { data, loading, error } = useStaff();
   const { user } = useAuth();
@@ -39,7 +40,9 @@ export function ColaboradoresView({
   const [tab, setTab] = useState<"empleados" | "cargos">("empleados");
 
   useEffect(() => {
-    onBreadcrumbChange?.(tab === "cargos" ? "Roles y Permisos" : null);
+    onBreadcrumbChange?.(
+      tab === "cargos" ? { label: "Roles y Permisos", onReset: () => setTab("empleados") } : null
+    );
     return () => onBreadcrumbChange?.(null);
   }, [tab, onBreadcrumbChange]);
   const [showModal, setShowModal] = useState(false);

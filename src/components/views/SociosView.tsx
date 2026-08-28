@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { SideDrawer } from "@/components/layout/SideDrawer";
+import type { OnBreadcrumbChange } from "@/components/layout/breadcrumb";
 import { RegistrarPagoModal } from "@/components/shared/RegistrarPagoModal";
 import { useCollection } from "@/lib/data/useCollection";
 import { addSocio, useSocios } from "@/lib/data/socios";
@@ -73,7 +74,7 @@ export interface SociosViewHandle {
 }
 
 interface SociosViewProps {
-  onBreadcrumbChange?: (extra: string | null) => void;
+  onBreadcrumbChange?: OnBreadcrumbChange;
 }
 
 export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function SociosView(
@@ -127,6 +128,11 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
 
   const tipoCuotaPorDefecto = tiposCuota.find((c) => c.porDefecto) || tiposCuota[0];
 
+  const finalizarAsistencia = () => {
+    setIsTakingAttendance(false);
+    setSearchTerm("");
+  };
+
   useImperativeHandle(ref, () => ({
     abrirNuevoSocio: () => setShowNewModal(true),
     abrirRegistrarPago: () => setShowRegistrarPago(true),
@@ -134,7 +140,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
   }));
 
   useEffect(() => {
-    onBreadcrumbChange?.(isTakingAttendance ? "Asistencia" : null);
+    onBreadcrumbChange?.(isTakingAttendance ? { label: "Asistencia", onReset: finalizarAsistencia } : null);
     return () => onBreadcrumbChange?.(null);
   }, [isTakingAttendance, onBreadcrumbChange]);
 
@@ -259,10 +265,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
             </div>
           </div>
           <button
-            onClick={() => {
-              setIsTakingAttendance(false);
-              setSearchTerm("");
-            }}
+            onClick={finalizarAsistencia}
             className="flex items-center gap-2 px-4 py-2 bg-white text-gray-900 rounded-md text-sm font-medium hover:bg-gray-100 shrink-0"
           >
             <X size={16} /> Finalizar

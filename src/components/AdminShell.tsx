@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomTabBar } from "@/components/layout/BottomTabBar";
 import { type TabId } from "@/components/layout/navItems";
 import { Header } from "@/components/layout/Header";
+import type { BreadcrumbExtra } from "@/components/layout/breadcrumb";
 import { SociosView, type SociosViewHandle } from "@/components/views/SociosView";
 import { PagosView } from "@/components/views/PagosView";
 import { ActividadesView } from "@/components/views/ActividadesView";
@@ -25,10 +26,8 @@ const TITLES: Record<TabId, string> = {
 export function AdminShell() {
   const [activeTab, setActiveTab] = useState<TabId>("socios");
   const [collapsed, setCollapsed] = useState(false);
-  const [breadcrumbExtra, setBreadcrumbExtra] = useState<string | null>(null);
+  const [breadcrumbExtra, setBreadcrumbExtra] = useState<BreadcrumbExtra | null>(null);
   const sociosRef = useRef<SociosViewHandle>(null);
-
-  const title = breadcrumbExtra ? `${TITLES[activeTab]} | ${breadcrumbExtra}` : TITLES[activeTab];
 
   const headerActions =
     activeTab === "socios" ? (
@@ -72,7 +71,8 @@ export function AdminShell() {
         }`}
       >
         <Header
-          title={title}
+          title={TITLES[activeTab]}
+          breadcrumbExtra={breadcrumbExtra}
           collapsed={collapsed}
           onToggleCollapsed={() => setCollapsed((c) => !c)}
           onAccount={() => setActiveTab("cuenta")}

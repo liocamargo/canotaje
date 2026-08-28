@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { SideDrawer } from "@/components/layout/SideDrawer";
+import type { OnBreadcrumbChange } from "@/components/layout/breadcrumb";
 import { addActividad, useActividades } from "@/lib/data/actividades";
 import {
   addInscripcion,
@@ -46,7 +47,7 @@ const emptyParticipanteForm = {
 export function ActividadesView({
   onBreadcrumbChange,
 }: {
-  onBreadcrumbChange?: (extra: string | null) => void;
+  onBreadcrumbChange?: OnBreadcrumbChange;
 }) {
   const { data: actividades, loading } = useActividades();
 
@@ -55,7 +56,9 @@ export function ActividadesView({
   const [subTab, setSubTab] = useState<SubTab>("proximas");
 
   useEffect(() => {
-    onBreadcrumbChange?.(subTab === "pasadas" ? "Pasadas" : null);
+    onBreadcrumbChange?.(
+      subTab === "pasadas" ? { label: "Pasadas", onReset: () => setSubTab("proximas") } : null
+    );
     return () => onBreadcrumbChange?.(null);
   }, [subTab, onBreadcrumbChange]);
 

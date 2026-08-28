@@ -6,11 +6,12 @@ import { usePagos, deletePago } from "@/lib/data/pagos";
 import { useSocios } from "@/lib/data/socios";
 import { getPeriodoActual } from "@/lib/format";
 import { RegistrarPagoModal } from "@/components/shared/RegistrarPagoModal";
+import type { OnBreadcrumbChange } from "@/components/layout/breadcrumb";
 
 export function PagosView({
   onBreadcrumbChange,
 }: {
-  onBreadcrumbChange?: (extra: string | null) => void;
+  onBreadcrumbChange?: OnBreadcrumbChange;
 }) {
   const { data: pagos, loading } = usePagos();
   const { data: socios } = useSocios();
@@ -20,7 +21,9 @@ export function PagosView({
   const [pagoTab, setPagoTab] = useState<"estado" | "historial">("estado");
 
   useEffect(() => {
-    onBreadcrumbChange?.(pagoTab === "historial" ? "Historial" : null);
+    onBreadcrumbChange?.(
+      pagoTab === "historial" ? { label: "Historial", onReset: () => setPagoTab("estado") } : null
+    );
     return () => onBreadcrumbChange?.(null);
   }, [pagoTab, onBreadcrumbChange]);
 

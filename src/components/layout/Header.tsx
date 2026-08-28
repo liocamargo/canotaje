@@ -3,15 +3,18 @@
 import type { ReactNode } from "react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { ProfileMenu } from "@/components/layout/ProfileMenu";
+import type { BreadcrumbExtra } from "@/components/layout/breadcrumb";
 
 export function Header({
   title,
+  breadcrumbExtra,
   collapsed,
   onToggleCollapsed,
   onAccount,
   actions,
 }: {
   title: string;
+  breadcrumbExtra?: BreadcrumbExtra | null;
   collapsed: boolean;
   onToggleCollapsed: () => void;
   onAccount: () => void;
@@ -27,7 +30,20 @@ export function Header({
         >
           {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
         </button>
-        <h2 className="text-xl font-semibold text-gray-800 truncate">{title}</h2>
+        {breadcrumbExtra ? (
+          <div className="flex items-center gap-1.5 min-w-0 text-xl font-semibold">
+            <button
+              onClick={breadcrumbExtra.onReset}
+              className="text-gray-500 hover:text-gray-900 truncate"
+            >
+              {title}
+            </button>
+            <span className="text-gray-300">|</span>
+            <h2 className="text-gray-800 truncate">{breadcrumbExtra.label}</h2>
+          </div>
+        ) : (
+          <h2 className="text-xl font-semibold text-gray-800 truncate">{title}</h2>
+        )}
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
