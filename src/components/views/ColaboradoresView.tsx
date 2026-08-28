@@ -17,7 +17,6 @@ interface StaffFormState {
   nombre: string;
   apellido: string;
   telefono: string;
-  etiqueta: string;
   rol: StaffRole | "";
 }
 
@@ -26,7 +25,6 @@ const EMPTY_FORM: StaffFormState = {
   nombre: "",
   apellido: "",
   telefono: "",
-  etiqueta: "",
   rol: "",
 };
 
@@ -60,7 +58,6 @@ export function ColaboradoresView() {
       nombre: row.nombre,
       apellido: row.apellido,
       telefono: row.telefono ?? "",
-      etiqueta: row.etiqueta ?? "",
       rol: row.rol,
     });
     setFormError(null);
@@ -84,7 +81,6 @@ export function ColaboradoresView() {
           nombre: form.nombre,
           apellido: form.apellido,
           telefono: form.telefono || undefined,
-          etiqueta: form.etiqueta || undefined,
           rol: form.rol,
         });
       } else {
@@ -93,7 +89,6 @@ export function ColaboradoresView() {
           nombre: form.nombre,
           apellido: form.apellido,
           telefono: form.telefono || undefined,
-          etiqueta: form.etiqueta || undefined,
           rol: form.rol,
         });
       }
@@ -186,7 +181,6 @@ export function ColaboradoresView() {
                   <tr>
                     <th className="text-left font-medium text-gray-500 px-4 py-3">Nombre</th>
                     <th className="text-left font-medium text-gray-500 px-4 py-3">Email</th>
-                    <th className="text-left font-medium text-gray-500 px-4 py-3">Etiqueta</th>
                     <th className="text-left font-medium text-gray-500 px-4 py-3">Rol</th>
                     <th className="text-left font-medium text-gray-500 px-4 py-3">Estado</th>
                     <th className="text-right font-medium text-gray-500 px-4 py-3">Acciones</th>
@@ -201,7 +195,6 @@ export function ColaboradoresView() {
                           {row.nombre} {row.apellido}
                         </td>
                         <td className="px-4 py-3 text-gray-500">{row.email}</td>
-                        <td className="px-4 py-3 text-gray-500">{row.etiqueta || "—"}</td>
                         <td className="px-4 py-3 text-gray-700">{ROL_LABEL[row.rol]}</td>
                         <td className="px-4 py-3">
                           <span
@@ -331,26 +324,14 @@ export function ColaboradoresView() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Teléfono</label>
-                  <input
-                    type="text"
-                    value={form.telefono}
-                    onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
-                    className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Etiqueta (opcional)</label>
-                  <input
-                    type="text"
-                    value={form.etiqueta}
-                    onChange={(e) => setForm((f) => ({ ...f, etiqueta: e.target.value }))}
-                    placeholder="Ej: Tesorero"
-                    className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Teléfono</label>
+                <input
+                  type="text"
+                  value={form.telefono}
+                  onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Rol de sistema</label>

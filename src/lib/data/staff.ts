@@ -16,7 +16,6 @@ export async function inviteStaff(data: {
   nombre: string;
   apellido: string;
   telefono?: string;
-  etiqueta?: string;
   rol: StaffRole;
 }) {
   const email = data.email.trim().toLowerCase();
@@ -28,7 +27,7 @@ export async function inviteStaff(data: {
   });
 }
 
-export async function updateStaffRole(email: string, data: Partial<Pick<Staff, "rol" | "nombre" | "apellido" | "telefono" | "etiqueta">>) {
+export async function updateStaffRole(email: string, data: Partial<Pick<Staff, "rol" | "nombre" | "apellido" | "telefono">>) {
   await updateDoc(doc(db, COLLECTION, email.trim().toLowerCase()), data);
 }
 

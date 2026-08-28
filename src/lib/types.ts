@@ -6,7 +6,6 @@ export interface Staff {
   nombre: string;
   apellido: string;
   telefono?: string;
-  etiqueta?: string;
   rol: StaffRole;
   estado: StaffEstado;
   uid?: string;

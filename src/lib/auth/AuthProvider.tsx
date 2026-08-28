@@ -57,7 +57,6 @@ export async function tryBootstrapAdmin(user: User) {
       nombre: user.displayName ?? "",
       apellido: "",
       rol: "admin",
-      etiqueta: "Fundador",
       estado: "activo",
       uid: user.uid,
       invitedAt: serverTimestamp(),
