@@ -55,19 +55,48 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Un desconocido (sin login) puede darse de alta desde /inscripcion, pero sólo
+    // puede crear su propio registro en estado "Pendiente" / "Al día" y sin grupo
+    // familiar — no puede autoasignarse activo, con deuda distinta ni family group.
+    function esAltaPublicaValida() {
+      return request.resource.data.estado == 'Pendiente' &&
+        request.resource.data.deuda == 'Al día' &&
+        request.resource.data.grupoFamiliar == null &&
+        request.resource.data.nombreCompleto is string && request.resource.data.nombreCompleto.size() > 0 &&
+        request.resource.data.dni is string && request.resource.data.dni.size() > 0 &&
+        request.resource.data.email is string && request.resource.data.email.size() > 0;
+    }
+
     match /socios/{id} {
       allow read, update: if isStaff() && puedeVerSocioDelGrupo(resource.data.grupoId);
-      allow create, delete: if isStaff() && !isProfesor();
+      allow create: if (isStaff() && !isProfesor()) || esAltaPublicaValida();
+      allow delete: if isStaff() && !isProfesor();
     }
+    // Nombres de grupos y tipos de cuota no son datos sensibles; se exponen de
+    // lectura pública para que el formulario de inscripción pueda mostrarlos.
     match /grupos/{id} {
-      allow read: if isStaff();
+      allow read: if true;
       allow write: if isStaff() && !isProfesor();
     }
-    match /tiposCuota/{id} { allow read, write: if isStaff(); }
+    match /tiposCuota/{id} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
     match /pagos/{id} { allow read, write: if isStaff(); }
     match /actividades/{id} { allow read, write: if isStaff(); }
     match /inscripciones/{id} { allow read, write: if isStaff(); }
     match /asistencias/{id} { allow read, write: if isStaff(); }
     match /config/{id} { allow read, write: if isStaff(); }
+
+    // Comprobantes de pago subidos desde /comprobante-pago (sin login). No exponemos
+    // lectura pública de `socios` para validar el DNI ahí mismo — en cambio, el
+    // staff revisa cada comprobante y lo empareja manualmente antes de confirmar el
+    // pago real; así nunca hay que exponer datos personales sin autenticación.
+    match /comprobantesPago/{id} {
+      allow create: if request.resource.data.dni is string && request.resource.data.dni.size() > 0
+        && request.resource.data.comprobanteUrl is string && request.resource.data.comprobanteUrl.size() > 0;
+      allow read, delete: if isStaff();
+      allow update: if false;
+    }
   }
 }

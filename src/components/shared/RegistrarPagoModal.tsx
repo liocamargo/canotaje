@@ -13,11 +13,13 @@ export function RegistrarPagoModal({
   onClose,
   socios,
   initialSocio,
+  onRegistered,
 }: {
   open: boolean;
   onClose: () => void;
   socios: Socio[];
   initialSocio?: Socio | null;
+  onRegistered?: () => void;
 }) {
   const periodoActual = getPeriodoActual();
 
@@ -85,6 +87,7 @@ export function RegistrarPagoModal({
           monto: montoNum,
         }))
       );
+      onRegistered?.();
       onClose();
     } finally {
       setSubmitting(false);

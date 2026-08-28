@@ -87,8 +87,18 @@ Un colaborador con rol `profesor` sólo ve (y sólo puede editar) a los socios q
 
 **Límite conocido de esta restricción:** hoy sólo alcanza a la colección `socios`. Las colecciones `pagos` y `asistencias` todavía no están filtradas por grupo a nivel de Firestore — un profesor que consultara esas colecciones directamente (sin pasar por la UI) podría ver registros de socios fuera de su grupo. Si esto importa para tu caso de uso, es el próximo paso a reforzar.
 
+## Formularios públicos (sin login)
+
+Dos páginas fuera del panel, pensadas para compartir por WhatsApp/redes/el sitio del club:
+
+- **`/inscripcion`** — alta pública de un socio nuevo. Cualquiera puede enviarlo sin loguearse; `firestore.rules` sólo lo deja crear el socio si queda en `estado: "Pendiente"`, `deuda: "Al día"` y sin grupo familiar — no puede autoasignarse activo ni con otro estado de cuenta. Un admin/secretaría revisa y edita el socio normalmente desde el panel después.
+- **`/comprobante-pago`** — alguien ingresa su DNI y adjunta una imagen o PDF del comprobante. **Importante**: esto NO valida en el momento si el DNI corresponde a un socio real, ni crea un pago automáticamente. A propósito no le dimos a este formulario público ningún acceso de lectura a `socios` (exponer nombre, salud, contacto de emergencia, etc. a cualquiera que pruebe un DNI sería un problema serio de privacidad). En cambio, el comprobante cae en la colección `comprobantesPago` y aparece en **Pagos** dentro del panel, en una sección "Comprobantes pendientes de revisión" donde el staff ve si el DNI matchea con algún socio y, si corresponde, confirma el pago con un clic (lo cual también borra el pendiente).
+
+Ambos formularios usan Firestore/Storage directo desde el navegador (sin backend propio), así que **necesitás desplegar `firestore.rules` y `storage.rules`** (ver más abajo) para que funcionen — si no, los envíos van a fallar con "permission denied".
+
 ## Qué falta / próximos pasos
 
-- Envío real de emails (recordatorios de pago, comprobantes) — hoy esos botones están deshabilitados, requieren un servicio de email (Resend, SendGrid, etc.) detrás de una función serverless.
+- Envío real de emails (recordatorios de pago, comprobantes, confirmación de inscripción) — hoy esos botones están deshabilitados, requieren un servicio de email (Resend, SendGrid, etc.) detrás de una función serverless.
 - Extender el filtrado por grupo de profesor a `pagos` y `asistencias` (ver arriba).
 - Permisos más finos por rol (hoy cualquier `staff` puede editar cualquier colección operativa salvo `socios`/`grupos`/`staff`; sólo la gestión de colaboradores está restringida a `admin`).
+- Los formularios públicos no tienen ningún límite de tasa (rate limiting) ni CAPTCHA — alguien podría mandar muchas inscripciones o comprobantes falsos. Para una escuela chica es un riesgo bajo, pero si se comparte el link ampliamente convendría agregar alguna protección (App Check, reCAPTCHA, o un Cloud Function intermedio).

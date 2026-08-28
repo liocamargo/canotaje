@@ -97,6 +97,13 @@ export interface Asistencia {
   presente: boolean;
 }
 
+export interface ComprobantePago {
+  id: string;
+  dni: string;
+  comprobanteUrl: string;
+  createdAt?: unknown;
+}
+
 export interface ClubConfig {
   nombreClub: string;
   emailContacto: string;
