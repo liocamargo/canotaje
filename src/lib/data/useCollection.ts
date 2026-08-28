@@ -19,7 +19,10 @@ export function useCollection<T>(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const constraintsKey = JSON.stringify(constraints.map((c) => c.type));
+  // Serializa los constraints completos (campo, operador y valor), no sólo su tipo -
+  // si sólo comparáramos el tipo, cambiar por ej. la fecha de un where("fecha","==",fecha)
+  // no dispararía una nueva subscripción porque el tipo ("where") sigue siendo el mismo.
+  const constraintsKey = JSON.stringify(constraints);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- resubscribing on a new query must show loading again

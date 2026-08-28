@@ -29,6 +29,19 @@ service cloud.firestore {
       return isStaff() && myStaffDoc().data.rol == 'admin';
     }
 
+    function isProfesor() {
+      return isStaff() && myStaffDoc().data.rol == 'profesor';
+    }
+
+    // Un profesor sólo puede ver/editar socios que pertenezcan a un grupo del que
+    // él sea el profesor asignado. Admin y secretaría no tienen esta restricción.
+    function puedeVerSocioDelGrupo(grupoId) {
+      return !isProfesor() ||
+        (grupoId != null &&
+         exists(/databases/$(database)/documents/grupos/$(grupoId)) &&
+         get(/databases/$(database)/documents/grupos/$(grupoId)).data.profesorEmail == request.auth.token.email);
+    }
+
     match /staff/{email} {
       allow get: if isSignedIn() && (request.auth.token.email == email || isAdmin());
       allow list: if isAdmin();
@@ -42,7 +55,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    match /socios/{id} { allow read, write: if isStaff(); }
+    match /socios/{id} {
+      allow read, update: if isStaff() && puedeVerSocioDelGrupo(resource.data.grupoId);
+      allow create, delete: if isStaff() && !isProfesor();
+    }
+    match /grupos/{id} {
+      allow read: if isStaff();
+      allow write: if isStaff() && !isProfesor();
+    }
     match /tiposCuota/{id} { allow read, write: if isStaff(); }
     match /pagos/{id} { allow read, write: if isStaff(); }
     match /actividades/{id} { allow read, write: if isStaff(); }

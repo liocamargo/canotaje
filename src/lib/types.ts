@@ -24,14 +24,20 @@ export interface Socio {
   telefono?: string;
   fechaNacimiento?: string;
   contactoEmergencia?: string;
-  categoria?: string;
   condicionMedica?: string;
   comprobanteInscripcionUrl?: string;
   estado: SocioEstado;
   deuda: SocioDeuda;
   grupoFamiliar?: string | null;
+  grupoId?: string | null;
   tipoCuotaId: string;
   createdAt?: unknown;
+}
+
+export interface Grupo {
+  id: string;
+  nombre: string;
+  profesorEmail: string;
 }
 
 export interface TipoCuota {

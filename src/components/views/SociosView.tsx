@@ -20,6 +20,7 @@ import { RegistrarPagoModal } from "@/components/shared/RegistrarPagoModal";
 import { useCollection } from "@/lib/data/useCollection";
 import { addSocio, useSocios } from "@/lib/data/socios";
 import { useTiposCuota } from "@/lib/data/tiposCuota";
+import { useGrupos } from "@/lib/data/grupos";
 import { useAsistenciasPorFecha, useAsistenciasPorSocio, toggleAsistencia } from "@/lib/data/asistencias";
 import { uploadComprobante } from "@/lib/storage";
 import { downloadCsv, toCsv } from "@/lib/csv";
@@ -47,7 +48,7 @@ const EMPTY_FORM = {
   dni: "",
   fechaNacimiento: "",
   contactoEmergencia: "",
-  categoria: "",
+  grupoId: "",
   condicionMedica: "",
 };
 
@@ -83,6 +84,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
 ) {
   const { data: socios, loading } = useSocios();
   const { data: tiposCuota } = useTiposCuota();
+  const { data: grupos } = useGrupos();
 
   const [showNewModal, setShowNewModal] = useState(false);
   const [showRegistrarPago, setShowRegistrarPago] = useState(false);
@@ -212,7 +214,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
         telefono: form.telefono || undefined,
         fechaNacimiento: form.fechaNacimiento || undefined,
         contactoEmergencia: form.contactoEmergencia || undefined,
-        categoria: form.categoria || undefined,
+        grupoId: form.grupoId || null,
         condicionMedica: form.condicionMedica || undefined,
         comprobanteInscripcionUrl,
         estado: form.estado,
@@ -592,12 +594,14 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                     </div>
                   </div>
 
-                  {(selectedSocio.categoria || selectedSocio.condicionMedica) && (
+                  {(selectedSocio.grupoId || selectedSocio.condicionMedica) && (
                     <div className="space-y-3">
-                      {selectedSocio.categoria && (
+                      {selectedSocio.grupoId && (
                         <div>
-                          <p className="text-xs text-gray-500 font-medium mb-1">Categoría</p>
-                          <p className="text-sm text-gray-900">{selectedSocio.categoria}</p>
+                          <p className="text-xs text-gray-500 font-medium mb-1">Grupo</p>
+                          <p className="text-sm text-gray-900">
+                            {grupos.find((g) => g.id === selectedSocio.grupoId)?.nombre || "—"}
+                          </p>
                         </div>
                       )}
                       {selectedSocio.condicionMedica && (
@@ -818,14 +822,19 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Categoría</label>
-                  <input
-                    type="text"
-                    placeholder="Ej: Menores, Juveniles..."
-                    value={form.categoria}
-                    onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}
-                    className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                  />
+                  <label className="block text-sm font-medium mb-1">Grupo</label>
+                  <select
+                    value={form.grupoId}
+                    onChange={(e) => setForm((f) => ({ ...f, grupoId: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  >
+                    <option value="">Sin grupo</option>
+                    {grupos.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.nombre}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium mb-1">

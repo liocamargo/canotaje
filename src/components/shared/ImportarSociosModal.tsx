@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { addSociosBatch } from "@/lib/data/socios";
-import type { Socio, SocioEstado, TipoCuota } from "@/lib/types";
+import type { Grupo, Socio, SocioEstado, TipoCuota } from "@/lib/types";
 
 export type CampoSocio =
   | "ignorar"
@@ -14,7 +14,7 @@ export type CampoSocio =
   | "dni"
   | "fechaNacimiento"
   | "contactoEmergencia"
-  | "categoria"
+  | "grupo"
   | "condicionMedica";
 
 const CAMPOS: { value: CampoSocio; label: string }[] = [
@@ -26,7 +26,7 @@ const CAMPOS: { value: CampoSocio; label: string }[] = [
   { value: "dni", label: "DNI" },
   { value: "fechaNacimiento", label: "Fecha de Nacimiento" },
   { value: "contactoEmergencia", label: "Contacto de Emergencia" },
-  { value: "categoria", label: "Categoría" },
+  { value: "grupo", label: "Grupo (por nombre)" },
   { value: "condicionMedica", label: "Condición médica o alergia" },
 ];
 
@@ -48,7 +48,7 @@ function adivinarCampo(header: string): CampoSocio {
   if (h === "dni") return "dni";
   if (h.includes("fecha de nacimiento")) return "fechaNacimiento";
   if (h.includes("contacto de emergencia")) return "contactoEmergencia";
-  if (h === "categoria") return "categoria";
+  if (h === "grupo" || h === "categoria") return "grupo";
   if (h.includes("condicion") || h.includes("alergia")) return "condicionMedica";
   return "ignorar";
 }
@@ -57,12 +57,14 @@ export function ImportarSociosModal({
   headers,
   rows,
   tiposCuota,
+  grupos,
   onClose,
   onImported,
 }: {
   headers: string[];
   rows: string[][];
   tiposCuota: TipoCuota[];
+  grupos: Grupo[];
   onClose: () => void;
   onImported: (result: { ok: number; errores: string[] }) => void;
 }) {
@@ -92,7 +94,7 @@ export function ImportarSociosModal({
       const idxDni = indiceDe("dni");
       const idxFecha = indiceDe("fechaNacimiento");
       const idxContacto = indiceDe("contactoEmergencia");
-      const idxCategoria = indiceDe("categoria");
+      const idxGrupo = indiceDe("grupo");
       const idxCondicion = indiceDe("condicionMedica");
 
       const errores: string[] = [];
@@ -115,6 +117,14 @@ export function ImportarSociosModal({
           ? (estadoRaw as SocioEstado)
           : "Pendiente";
 
+        const grupoNombre = val(idxGrupo);
+        const grupoEncontrado = grupoNombre
+          ? grupos.find((g) => normalizeHeader(g.nombre) === normalizeHeader(grupoNombre))
+          : undefined;
+        if (grupoNombre && !grupoEncontrado) {
+          errores.push(`Fila ${numeroFila}: no se encontró un grupo llamado "${grupoNombre}", se importó sin grupo asignado.`);
+        }
+
         nuevosSocios.push({
           nombreCompleto,
           estado,
@@ -123,7 +133,7 @@ export function ImportarSociosModal({
           dni,
           fechaNacimiento: val(idxFecha) || undefined,
           contactoEmergencia: val(idxContacto) || undefined,
-          categoria: val(idxCategoria) || undefined,
+          grupoId: grupoEncontrado?.id ?? null,
           condicionMedica: val(idxCondicion) || undefined,
           deuda: "Al día",
           grupoFamiliar: null,

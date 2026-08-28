@@ -9,9 +9,11 @@ import {
   useTiposCuota,
 } from "@/lib/data/tiposCuota";
 import { DEFAULT_CONFIG, saveClubConfig, useClubConfig } from "@/lib/data/config";
+import { useGrupos } from "@/lib/data/grupos";
 import { downloadCsv, parseCsv, toCsv } from "@/lib/csv";
 import { formatMonto, formatMontoInput, parseMontoInput } from "@/lib/format";
 import { ImportarSociosModal } from "@/components/shared/ImportarSociosModal";
+import { GruposCard } from "@/components/shared/GruposCard";
 import type { ClubConfig, TipoCuota } from "@/lib/types";
 
 const PLANTILLA_HEADERS = [
@@ -22,13 +24,14 @@ const PLANTILLA_HEADERS = [
   "DNI",
   "Fecha de Nacimiento",
   "Contacto de Emergencia",
-  "Categoría",
+  "Grupo",
   "Condición médica o alergia",
 ];
 
 export function ConfiguracionView() {
   const { config, loading: configLoading } = useClubConfig();
   const { data: tiposCuota, loading: tiposLoading } = useTiposCuota();
+  const { data: grupos } = useGrupos();
 
   const [form, setForm] = useState<ClubConfig>(DEFAULT_CONFIG);
   const [saving, setSaving] = useState(false);
@@ -288,6 +291,8 @@ export function ConfiguracionView() {
         </div>
       </div>
 
+      <GruposCard />
+
       {/* Notificaciones */}
       <div className="bg-white border rounded-xl shadow-sm p-6 space-y-6">
         <div>
@@ -380,6 +385,7 @@ export function ConfiguracionView() {
           headers={csvParaEmparejar.headers}
           rows={csvParaEmparejar.rows}
           tiposCuota={tiposCuota}
+          grupos={grupos}
           onClose={() => setCsvParaEmparejar(null)}
           onImported={setImportResult}
         />

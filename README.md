@@ -48,10 +48,10 @@ Las reglas (`firestore.rules`, `storage.rules`) no se despliegan solas — hace 
 npm install -g firebase-tools   # una sola vez
 firebase login
 firebase use canotaje           # sólo la primera vez, o firebase init si pide vincular
-firebase deploy --only firestore:rules,storage
+firebase deploy --only firestore:rules,firestore:indexes,storage
 ```
 
-Corré esto cada vez que edites `firestore.rules` o `storage.rules` (por ejemplo, al cambiar la lista de bootstrap admins o al agregar una colección nueva).
+Corré esto cada vez que edites `firestore.rules`, `storage.rules` o `firestore.indexes.json` (por ejemplo, al cambiar la lista de bootstrap admins o al agregar una colección/consulta nueva).
 
 ## Desplegar en Vercel
 
@@ -81,7 +81,14 @@ storage.rules                 # reglas de seguridad de Storage (comprobantes de 
 _mockup/                      # diseño original de Claude Design, sólo de referencia — no se usa en la app
 ```
 
+## Grupos y visibilidad por profesor
+
+Un colaborador con rol `profesor` sólo ve (y sólo puede editar) a los socios que pertenecen a algún `Grupo` donde figura como el profesor asignado — se configura en **Configuración → Grupos**. Esto está reforzado en `firestore.rules` (no es sólo un filtro de la UI): la colección `socios` valida, por cada documento, que el `grupoId` corresponda a un grupo cuyo `profesorEmail` sea el del usuario logueado. Admin y secretaría ven todo sin restricción.
+
+**Límite conocido de esta restricción:** hoy sólo alcanza a la colección `socios`. Las colecciones `pagos` y `asistencias` todavía no están filtradas por grupo a nivel de Firestore — un profesor que consultara esas colecciones directamente (sin pasar por la UI) podría ver registros de socios fuera de su grupo. Si esto importa para tu caso de uso, es el próximo paso a reforzar.
+
 ## Qué falta / próximos pasos
 
 - Envío real de emails (recordatorios de pago, comprobantes) — hoy esos botones están deshabilitados, requieren un servicio de email (Resend, SendGrid, etc.) detrás de una función serverless.
-- Permisos más finos por rol (hoy cualquier `staff` puede editar cualquier colección operativa; sólo la gestión de colaboradores está restringida a `admin`).
+- Extender el filtrado por grupo de profesor a `pagos` y `asistencias` (ver arriba).
+- Permisos más finos por rol (hoy cualquier `staff` puede editar cualquier colección operativa salvo `socios`/`grupos`/`staff`; sólo la gestión de colaboradores está restringida a `admin`).
