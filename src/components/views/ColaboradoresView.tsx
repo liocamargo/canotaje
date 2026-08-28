@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Briefcase, Edit2, Plus, Trash2, X } from "lucide-react";
 import { inviteStaff, removeStaff, updateStaffRole, useStaff } from "@/lib/data/staff";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -28,11 +28,20 @@ const EMPTY_FORM: StaffFormState = {
   rol: "",
 };
 
-export function ColaboradoresView() {
+export function ColaboradoresView({
+  onBreadcrumbChange,
+}: {
+  onBreadcrumbChange?: (extra: string | null) => void;
+}) {
   const { data, loading, error } = useStaff();
   const { user } = useAuth();
 
   const [tab, setTab] = useState<"empleados" | "cargos">("empleados");
+
+  useEffect(() => {
+    onBreadcrumbChange?.(tab === "cargos" ? "Roles y Permisos" : null);
+    return () => onBreadcrumbChange?.(null);
+  }, [tab, onBreadcrumbChange]);
   const [showModal, setShowModal] = useState(false);
   const [editingEmail, setEditingEmail] = useState<string | null>(null);
   const [form, setForm] = useState<StaffFormState>(EMPTY_FORM);

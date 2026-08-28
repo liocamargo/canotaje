@@ -25,7 +25,10 @@ const TITLES: Record<TabId, string> = {
 export function AdminShell() {
   const [activeTab, setActiveTab] = useState<TabId>("socios");
   const [collapsed, setCollapsed] = useState(false);
+  const [breadcrumbExtra, setBreadcrumbExtra] = useState<string | null>(null);
   const sociosRef = useRef<SociosViewHandle>(null);
+
+  const title = breadcrumbExtra ? `${TITLES[activeTab]} | ${breadcrumbExtra}` : TITLES[activeTab];
 
   const headerActions =
     activeTab === "socios" ? (
@@ -69,7 +72,7 @@ export function AdminShell() {
         }`}
       >
         <Header
-          title={TITLES[activeTab]}
+          title={title}
           collapsed={collapsed}
           onToggleCollapsed={() => setCollapsed((c) => !c)}
           onAccount={() => setActiveTab("cuenta")}
@@ -77,10 +80,14 @@ export function AdminShell() {
         />
 
         <div className="flex-1 overflow-y-auto pb-24 lg:pb-0">
-          {activeTab === "socios" && <SociosView ref={sociosRef} />}
-          {activeTab === "pagos" && <PagosView />}
-          {activeTab === "actividades" && <ActividadesView />}
-          {activeTab === "colaboradores" && <ColaboradoresView />}
+          {activeTab === "socios" && (
+            <SociosView ref={sociosRef} onBreadcrumbChange={setBreadcrumbExtra} />
+          )}
+          {activeTab === "pagos" && <PagosView onBreadcrumbChange={setBreadcrumbExtra} />}
+          {activeTab === "actividades" && <ActividadesView onBreadcrumbChange={setBreadcrumbExtra} />}
+          {activeTab === "colaboradores" && (
+            <ColaboradoresView onBreadcrumbChange={setBreadcrumbExtra} />
+          )}
           {activeTab === "configuracion" && <ConfiguracionView />}
           {activeTab === "cuenta" && <MiCuentaView />}
         </div>

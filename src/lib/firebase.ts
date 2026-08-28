@@ -1,6 +1,6 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { type Analytics, isSupported as isAnalyticsSupported, getAnalytics } from "firebase/analytics";
 
@@ -23,7 +23,20 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
 
 export const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(firebaseApp);
-export const db = getFirestore(firebaseApp);
+
+// Los formularios arman los datos a guardar con campos opcionales en `undefined`
+// (ej. `telefono: form.telefono || undefined`); ignoreUndefinedProperties evita que
+// Firestore rechace el documento entero por eso, en vez de tener que limpiar cada
+// objeto a mano antes de cada addDoc/setDoc/updateDoc.
+let firestoreDb;
+try {
+  firestoreDb = initializeFirestore(firebaseApp, { ignoreUndefinedProperties: true });
+} catch {
+  // Ya se había inicializado (por ejemplo, tras un hot-reload en desarrollo).
+  firestoreDb = getFirestore(firebaseApp);
+}
+export const db = firestoreDb;
+
 export const storage = getStorage(firebaseApp);
 
 let analyticsPromise: Promise<Analytics | null> | null = null;

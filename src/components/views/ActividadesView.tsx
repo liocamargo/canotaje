@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Calendar,
   Car,
@@ -43,12 +43,21 @@ const emptyParticipanteForm = {
   pala: "",
 };
 
-export function ActividadesView() {
+export function ActividadesView({
+  onBreadcrumbChange,
+}: {
+  onBreadcrumbChange?: (extra: string | null) => void;
+}) {
   const { data: actividades, loading } = useActividades();
 
   const [selectedActividadId, setSelectedActividadId] = useState<string | null>(null);
   const [actividadTab, setActividadTab] = useState<DrawerTab>("detalles");
   const [subTab, setSubTab] = useState<SubTab>("proximas");
+
+  useEffect(() => {
+    onBreadcrumbChange?.(subTab === "pasadas" ? "Pasadas" : null);
+    return () => onBreadcrumbChange?.(null);
+  }, [subTab, onBreadcrumbChange]);
 
   const [showNewActividad, setShowNewActividad] = useState(false);
   const [form, setForm] = useState(emptyForm);

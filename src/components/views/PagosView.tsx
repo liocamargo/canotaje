@@ -1,19 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CreditCard, Download, FileText, Mail, Search, Trash2 } from "lucide-react";
 import { usePagos, deletePago } from "@/lib/data/pagos";
 import { useSocios } from "@/lib/data/socios";
 import { getPeriodoActual } from "@/lib/format";
 import { RegistrarPagoModal } from "@/components/shared/RegistrarPagoModal";
 
-export function PagosView() {
+export function PagosView({
+  onBreadcrumbChange,
+}: {
+  onBreadcrumbChange?: (extra: string | null) => void;
+}) {
   const { data: pagos, loading } = usePagos();
   const { data: socios } = useSocios();
 
   const [showNewPago, setShowNewPago] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [pagoTab, setPagoTab] = useState<"estado" | "historial">("estado");
+
+  useEffect(() => {
+    onBreadcrumbChange?.(pagoTab === "historial" ? "Historial" : null);
+    return () => onBreadcrumbChange?.(null);
+  }, [pagoTab, onBreadcrumbChange]);
 
   const periodoActual = useMemo(() => getPeriodoActual(), []);
 

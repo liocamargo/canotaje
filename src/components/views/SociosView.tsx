@@ -72,7 +72,14 @@ export interface SociosViewHandle {
   activarAsistencia: () => void;
 }
 
-export const SociosView = forwardRef<SociosViewHandle>(function SociosView(_props, ref) {
+interface SociosViewProps {
+  onBreadcrumbChange?: (extra: string | null) => void;
+}
+
+export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function SociosView(
+  { onBreadcrumbChange },
+  ref
+) {
   const { data: socios, loading } = useSocios();
   const { data: tiposCuota } = useTiposCuota();
 
@@ -125,6 +132,11 @@ export const SociosView = forwardRef<SociosViewHandle>(function SociosView(_prop
     abrirRegistrarPago: () => setShowRegistrarPago(true),
     activarAsistencia: () => setIsTakingAttendance(true),
   }));
+
+  useEffect(() => {
+    onBreadcrumbChange?.(isTakingAttendance ? "Asistencia" : null);
+    return () => onBreadcrumbChange?.(null);
+  }, [isTakingAttendance, onBreadcrumbChange]);
 
   useEffect(() => {
     try {
