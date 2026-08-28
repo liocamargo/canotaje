@@ -5,6 +5,8 @@ import { orderBy, where } from "firebase/firestore";
 import {
   Calendar,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Columns3,
   Download,
   Mail,
@@ -27,16 +29,18 @@ import { downloadCsv, toCsv } from "@/lib/csv";
 import type { Pago, Socio, SocioDeuda, SocioEstado } from "@/lib/types";
 
 type SocioTab = "perfil" | "historial" | "asistencia";
-type ColumnKey = "nombre" | "dni" | "telefono" | "tipoCuota";
+type ColumnKey = "nombre" | "email" | "dni" | "telefono" | "tipoCuota";
 
 const COLUMN_LABELS: Record<ColumnKey, string> = {
   nombre: "Nombre",
+  email: "Email",
   dni: "DNI",
   telefono: "Teléfono",
   tipoCuota: "Tipo de cuota",
 };
-const COLUMN_KEYS: ColumnKey[] = ["nombre", "dni", "telefono", "tipoCuota"];
+const COLUMN_KEYS: ColumnKey[] = ["nombre", "email", "dni", "telefono", "tipoCuota"];
 const COLUMNS_STORAGE_KEY = "canotaje:sociosColumnas";
+const PAGE_SIZE = 14;
 
 const ESTADOS: SocioEstado[] = ["Activo", "Pendiente", "Inactivo"];
 
@@ -99,10 +103,12 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
   const [showColumnasMenu, setShowColumnasMenu] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>({
     nombre: true,
+    email: true,
     dni: true,
     telefono: true,
     tipoCuota: true,
   });
+  const [page, setPage] = useState(1);
 
   // --- Asistencia ---
   const [isTakingAttendance, setIsTakingAttendance] = useState(false);
@@ -185,12 +191,24 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
     return matchesSearch && matchesEstado && matchesDeuda;
   });
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, estadoFilter, deudaFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredSocios.length / PAGE_SIZE));
+  const paginaActual = Math.min(page, totalPages);
+  const paginatedSocios = filteredSocios.slice(
+    (paginaActual - 1) * PAGE_SIZE,
+    paginaActual * PAGE_SIZE
+  );
+
   const handleExportar = () => {
     const columns = COLUMN_KEYS.filter((c) => visibleColumns[c]);
     const header = columns.map((c) => COLUMN_LABELS[c]);
     const rows = filteredSocios.map((s) =>
       columns.map((c) => {
         if (c === "nombre") return s.nombreCompleto;
+        if (c === "email") return s.email;
         if (c === "dni") return s.dni;
         if (c === "telefono") return s.telefono ?? "";
         return tiposCuota.find((t) => t.id === s.tipoCuotaId)?.nombre ?? "";
@@ -369,6 +387,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
             ) : (
               <tr>
                 {visibleColumns.nombre && <th className="px-6 py-3 font-medium text-gray-500">Nombre</th>}
+                {visibleColumns.email && <th className="px-6 py-3 font-medium text-gray-500">Email</th>}
                 {visibleColumns.dni && <th className="px-6 py-3 font-medium text-gray-500">DNI</th>}
                 {visibleColumns.telefono && <th className="px-6 py-3 font-medium text-gray-500">Teléfono</th>}
                 {visibleColumns.tipoCuota && (
@@ -389,7 +408,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
               </tr>
             ) : (
               <>
-                {filteredSocios.map((socio) => {
+                {paginatedSocios.map((socio) => {
                   const isPresent = attendanceMap[socio.id] ?? false;
 
                   return (
@@ -412,15 +431,7 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                       {isTakingAttendance ? (
                         <>
                           <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
-                                {initials(socio.nombreCompleto)}
-                              </div>
-                              <div>
-                                <p className="font-medium text-gray-900">{socio.nombreCompleto}</p>
-                                <p className="text-xs text-gray-500">{socio.email}</p>
-                              </div>
-                            </div>
+                            <p className="font-medium text-gray-900">{socio.nombreCompleto}</p>
                           </td>
                           <td className="px-6 py-4 text-gray-600">{socio.dni}</td>
                           <td className="px-6 py-4 text-right">
@@ -444,16 +455,11 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
                         <>
                           {visibleColumns.nombre && (
                             <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
-                                  {initials(socio.nombreCompleto)}
-                                </div>
-                                <div>
-                                  <p className="font-medium text-gray-900">{socio.nombreCompleto}</p>
-                                  <p className="text-xs text-gray-500">{socio.email}</p>
-                                </div>
-                              </div>
+                              <p className="font-medium text-gray-900">{socio.nombreCompleto}</p>
                             </td>
+                          )}
+                          {visibleColumns.email && (
+                            <td className="px-6 py-4 text-gray-600">{socio.email}</td>
                           )}
                           {visibleColumns.dni && (
                             <td className="px-6 py-4 text-gray-600">{socio.dni}</td>
@@ -488,6 +494,30 @@ export const SociosView = forwardRef<SociosViewHandle, SociosViewProps>(function
           </tbody>
         </table>
       </div>
+
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-gray-500">
+            Página {paginaActual} de {totalPages} · {filteredSocios.length} socios
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={paginaActual === 1}
+              className="p-2 border rounded-md hover:bg-gray-50 text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={paginaActual === totalPages}
+              className="p-2 border rounded-md hover:bg-gray-50 text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Drawer: Detalle del Socio */}
       <SideDrawer isOpen={!!selectedSocio} onClose={() => setSelectedSocio(null)}>

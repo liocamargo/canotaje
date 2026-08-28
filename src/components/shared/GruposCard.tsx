@@ -11,25 +11,21 @@ export function GruposCard() {
   const { data: grupos, loading } = useGrupos();
   const { data: staff } = useStaff();
   const { data: socios } = useSocios();
-  const profesores = staff.filter((s) => s.rol === "profesor");
 
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [nombre, setNombre] = useState("");
-  const [profesorEmail, setProfesorEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const openNuevo = () => {
     setEditingId(null);
     setNombre("");
-    setProfesorEmail(profesores[0]?.email ?? "");
     setShowModal(true);
   };
 
   const openEditar = (g: Grupo) => {
     setEditingId(g.id);
     setNombre(g.nombre);
-    setProfesorEmail(g.profesorEmail);
     setShowModal(true);
   };
 
@@ -37,17 +33,16 @@ export function GruposCard() {
     setShowModal(false);
     setEditingId(null);
     setNombre("");
-    setProfesorEmail("");
   };
 
   const handleGuardar = async () => {
-    if (!nombre.trim() || !profesorEmail) return;
+    if (!nombre.trim()) return;
     setSubmitting(true);
     try {
       if (editingId) {
-        await updateGrupo(editingId, { nombre: nombre.trim(), profesorEmail });
+        await updateGrupo(editingId, { nombre: nombre.trim() });
       } else {
-        await addGrupo({ nombre: nombre.trim(), profesorEmail });
+        await addGrupo({ nombre: nombre.trim(), profesorEmail: "" });
       }
       close();
     } finally {
@@ -68,7 +63,7 @@ export function GruposCard() {
   const contarSocios = (grupoId: string) => socios.filter((s) => s.grupoId === grupoId).length;
   const nombreProfesor = (email: string) => {
     const p = staff.find((s) => s.email === email);
-    return p ? `${p.nombre} ${p.apellido}`.trim() || p.email : email;
+    return p ? `${p.nombre} ${p.apellido}`.trim() || p.email : "Sin profesor asignado";
   };
 
   return (
@@ -77,19 +72,13 @@ export function GruposCard() {
         <div>
           <h3 className="text-base font-semibold text-gray-900">Grupos</h3>
           <p className="text-sm text-gray-500">
-            Asigná un profesor a cargo de cada grupo de socios. Un profesor sólo ve a
-            los socios de sus propios grupos.
+            El profesor a cargo de cada grupo se asigna desde su perfil en
+            Colaboradores. Un profesor sólo ve a los socios de sus propios grupos.
           </p>
         </div>
         <button
           onClick={openNuevo}
-          disabled={profesores.length === 0}
-          title={
-            profesores.length === 0
-              ? "Primero invitá a un colaborador con rol Profesor"
-              : undefined
-          }
-          className="flex items-center gap-2 text-sm font-medium text-gray-900 border px-3 py-1.5 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 text-sm font-medium text-gray-900 border px-3 py-1.5 rounded-md hover:bg-gray-50"
         >
           <Plus size={16} /> Nuevo grupo
         </button>
@@ -149,27 +138,11 @@ export function GruposCard() {
                   className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Profesor a cargo</label>
-                <select
-                  value={profesorEmail}
-                  onChange={(e) => setProfesorEmail(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-gray-900"
-                >
-                  <option value="">Seleccionar profesor...</option>
-                  {profesores.map((p) => (
-                    <option key={p.email} value={p.email}>
-                      {`${p.nombre} ${p.apellido}`.trim() || p.email}
-                    </option>
-                  ))}
-                </select>
-                {profesores.length === 0 && (
-                  <p className="text-xs text-amber-600 mt-1">
-                    No hay colaboradores con rol Profesor todavía. Invitá uno desde
-                    Colaboradores.
-                  </p>
-                )}
-              </div>
+              {editingId && (
+                <p className="text-xs text-gray-500">
+                  Para asignarle un profesor, editá su perfil desde Colaboradores.
+                </p>
+              )}
             </div>
             <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
               <button
@@ -180,7 +153,7 @@ export function GruposCard() {
               </button>
               <button
                 onClick={handleGuardar}
-                disabled={!nombre.trim() || !profesorEmail || submitting}
+                disabled={!nombre.trim() || submitting}
                 className="px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Guardar

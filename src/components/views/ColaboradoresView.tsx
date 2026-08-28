@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Briefcase, Edit2, Plus, Trash2, X } from "lucide-react";
 import { inviteStaff, removeStaff, updateStaffRole, useStaff } from "@/lib/data/staff";
+import { updateGrupo, useGrupos } from "@/lib/data/grupos";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import type { OnBreadcrumbChange } from "@/components/layout/breadcrumb";
 import type { Staff, StaffRole } from "@/lib/types";
@@ -35,6 +36,7 @@ export function ColaboradoresView({
   onBreadcrumbChange?: OnBreadcrumbChange;
 }) {
   const { data, loading, error } = useStaff();
+  const { data: grupos } = useGrupos();
   const { user } = useAuth();
 
   const [tab, setTab] = useState<"empleados" | "cargos">("empleados");
@@ -48,6 +50,7 @@ export function ColaboradoresView({
   const [showModal, setShowModal] = useState(false);
   const [editingEmail, setEditingEmail] = useState<string | null>(null);
   const [form, setForm] = useState<StaffFormState>(EMPTY_FORM);
+  const [selectedGrupoIds, setSelectedGrupoIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [deletingEmail, setDeletingEmail] = useState<string | null>(null);
@@ -59,6 +62,7 @@ export function ColaboradoresView({
   function openNewModal() {
     setEditingEmail(null);
     setForm(EMPTY_FORM);
+    setSelectedGrupoIds(new Set());
     setFormError(null);
     setShowModal(true);
   }
@@ -72,6 +76,11 @@ export function ColaboradoresView({
       telefono: row.telefono ?? "",
       rol: row.rol,
     });
+    setSelectedGrupoIds(
+      new Set(
+        grupos.filter((g) => g.profesorEmail?.toLowerCase() === row.email.toLowerCase()).map((g) => g.id)
+      )
+    );
     setFormError(null);
     setShowModal(true);
   }
@@ -80,7 +89,17 @@ export function ColaboradoresView({
     setShowModal(false);
     setEditingEmail(null);
     setForm(EMPTY_FORM);
+    setSelectedGrupoIds(new Set());
     setFormError(null);
+  }
+
+  function toggleGrupo(id: string) {
+    setSelectedGrupoIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   async function handleSubmit() {
@@ -104,6 +123,18 @@ export function ColaboradoresView({
           rol: form.rol,
         });
       }
+
+      const email = form.email.trim().toLowerCase();
+      const grupoIdsAAsignar = form.rol === "profesor" ? selectedGrupoIds : new Set<string>();
+      const cambios = grupos
+        .filter((g) => {
+          const yaAsignado = g.profesorEmail?.toLowerCase() === email;
+          const deberiaEstarAsignado = grupoIdsAAsignar.has(g.id);
+          return yaAsignado !== deberiaEstarAsignado;
+        })
+        .map((g) => updateGrupo(g.id, { profesorEmail: grupoIdsAAsignar.has(g.id) ? email : "" }));
+      await Promise.all(cambios);
+
       closeModal();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
@@ -358,6 +389,33 @@ export function ColaboradoresView({
                   <option value="secretaria">Secretaría</option>
                 </select>
               </div>
+              {form.rol === "profesor" && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Grupos a cargo</label>
+                  {grupos.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      Todavía no hay grupos creados. Podés crearlos desde la sección Grupos.
+                    </p>
+                  ) : (
+                    <div className="border rounded-md divide-y max-h-40 overflow-y-auto">
+                      {grupos.map((g) => (
+                        <label
+                          key={g.id}
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedGrupoIds.has(g.id)}
+                            onChange={() => toggleGrupo(g.id)}
+                            className="rounded border-gray-300"
+                          />
+                          {g.nombre}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
               <button
